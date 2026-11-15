@@ -314,10 +314,14 @@ main{flex:1;width:100%;max-width:1200px;margin:0 auto;padding-block:28px 64px;
   cursor:pointer;transition:background var(--t),color var(--t)}
 .speak:hover{background:var(--color-primary);color:#fff;border-color:transparent}
 .speak .ms{font-size:24px}
+.speak--sm{width:40px;height:40px}
+.speak--sm .ms{font-size:20px}
 .speak--hero{width:92px;height:92px;margin:6px auto 22px;background:var(--color-primary);color:#fff;
   border-color:transparent}
 .speak--hero .ms{font-size:40px}
 .answers{display:grid;gap:12px}
+.answer-row{display:flex;align-items:center;gap:10px}
+.answer-row .answer{flex:1;min-width:0}
 .answer{display:flex;align-items:center;gap:12px;text-align:left;width:100%;background:var(--color-surface);
   border:1px solid var(--color-border);border-radius:var(--radius-button);padding:16px;
   font-weight:600;font-size:16px;cursor:pointer;transition:border-color var(--t),background var(--t)}
@@ -369,7 +373,7 @@ main{flex:1;width:100%;max-width:1200px;margin:0 auto;padding-block:28px 64px;
 .fbtext b{display:block;font-family:var(--font-heading);font-weight:700;font-size:19px}
 .is-ok .fbtext b{color:var(--color-primary-ink)}
 .is-no .fbtext b{color:var(--color-coral-ink)}
-.fbtext small{display:block;font-size:14.5px;margin-top:1px}
+.fbtext small{display:flex;align-items:center;gap:8px;font-size:14.5px;margin-top:1px}
 .foot-leon{display:none;width:62px;flex:none;align-self:center}
 .skip{background:transparent;border:0;color:var(--color-text-muted);font-weight:700;font-size:13px;
   letter-spacing:.06em;text-transform:uppercase;cursor:pointer;padding:12px 2px}
@@ -1348,8 +1352,10 @@ function pageLearn(){
   return '<div class="page"><div class="learn-layout">'
     + '<div class="learn-main">' + main
     + '<p class="small-note">' + (hasVoiceFor(c.tts)
-        ? "Tap the speaker on any prompt to hear it read aloud."
-        : "No speech voice for " + esc(c.name) + " is installed, so listening exercises are off.") + '</p>'
+        ? "Tap the speaker beside any " + esc(c.name) + " word to hear it read aloud."
+        : "No " + esc(c.name) + " speech voice is installed, so the audio is off rather than read in "
+          + "the wrong accent. On Windows: Settings &rsaquo; Time &amp; language &rsaquo; Language &amp; region "
+          + "&rsaquo; add " + esc(c.name) + " with its speech pack, then reload.") + '</p>'
     + '</div>' + rail + '</div></div>';
 }
 
@@ -1524,7 +1530,8 @@ function bodyFor(ex, locked){
   if (ex.kind === "pick_tgt") {
     return qhead("Choose the right answer", "How do you say this in " + esc(c.name) + "?")
       + '<div class="prompt">' + mascotImg("curious", 76) + '<div class="bubble">' + esc(ex.item.en) + '</div></div>'
-      + optList(ex, locked, function(it){ return esc(it.tgt) + romOf(it); });
+      + optList(ex, locked, function(it){ return esc(it.tgt) + romOf(it); },
+                function(it){ return it.tgt; });
   }
   if (ex.kind === "pick_en") {
     return qhead("Choose the right answer", "What does this mean?")
@@ -1562,12 +1569,29 @@ function bodyFor(ex, locked){
     + '<p class="hint">' + note + '</p>';
 }
 
-function optList(ex, locked, label){
+/* `say` is given when the options themselves are in the target language. The
+   speaker cannot live inside the option, since a button may not nest, so the
+   pair sits in a row together. */
+function optList(ex, locked, label, say){
   return '<div class="answers">' + ex.options.map(function(it, i){
-    return '<button class="answer' + optCls(it.id, ex, locked) + '" data-pick="' + it.id + '"'
+    const btn = '<button class="answer' + optCls(it.id, ex, locked) + '" data-pick="' + it.id + '"'
       + (locked ? " disabled" : "") + '><kbd>' + "ABCD".charAt(i) + '</kbd><span>' + label(it) + '</span></button>';
+    if (!say) return btn;
+    const spk = spkBtn(say(it), "speak--sm");
+    return spk ? '<div class="answer-row">' + btn + spk + '</div>' : btn;
   }).join("") + '</div>';
 }
+/* What a tap on an option should read out: the option itself when the options
+   are in the target language, the prompt otherwise, so the French is heard
+   either way rather than an English answer being read back. */
+function pickAudio(ex, id){
+  if (ex.kind === "pick_tgt") {
+    const chosen = ex.options.filter(function(o){ return o.id === id; })[0];
+    return chosen ? chosen.tgt : "";
+  }
+  return ex.item ? ex.item.tgt : "";
+}
+
 function optCls(id, ex, locked){
   if (!locked) return sess.sel === id ? " selected" : "";
   if (id === ex.answer) return " correct";
@@ -1598,7 +1622,8 @@ function footFor(ex){
     return '<div class="footrow" role="status">'
       + '<span class="fbicon">' + ic(ok ? "check_circle" : "cancel") + '</span>'
       + '<span class="fbtext"><b>' + title + '</b>'
-      + (ok && !sess.typo ? "" : '<small>' + esc(answer) + '</small>') + '</span>'
+      + (ok && !sess.typo ? "" : '<small>' + esc(answer)
+          + (ex.item ? spkBtn(ex.item.tgt, "speak--sm") : "") + '</small>') + '</span>'
       + '<img class="foot-leon" src="' + MASCOT[ok ? "celebrating" : "thinking"]
       + '" alt="Leon, the Linguae chameleon">'
       + '<button class="btn btn--primary" id="cont">Continue</button></div>';
@@ -1638,10 +1663,20 @@ function wireLesson(){
     speak(ex.item.tgt, course().tts);
   }
   app.querySelectorAll("[data-pick]").forEach(function(b){
-    b.addEventListener("click", function(){ sess.sel = b.getAttribute("data-pick"); render(); });
+    b.addEventListener("click", function(){
+      sess.sel = b.getAttribute("data-pick");
+      const heard = pickAudio(ex, sess.sel);
+      if (heard) speak(heard, course().tts);
+      render();
+    });
   });
   app.querySelectorAll("[data-tile]").forEach(function(b){
-    b.addEventListener("click", function(){ sess.used.push(ex.tiles[+b.getAttribute("data-tile")]); render(); });
+    b.addEventListener("click", function(){
+      const word = ex.tiles[+b.getAttribute("data-tile")];
+      sess.used.push(word);
+      speak(word, course().tts);
+      render();
+    });
   });
   app.querySelectorAll("[data-un]").forEach(function(b){
     b.addEventListener("click", function(){ sess.used.splice(+b.getAttribute("data-un"), 1); render(); });
@@ -1670,6 +1705,10 @@ function tapPair(btn, ex){
   const side = btn.getAttribute("data-side"), id = btn.getAttribute("data-id");
   const token = side + ":" + id;
   if (sess.matched.indexOf(id) > -1) return;
+  if (side === "tgt") {
+    const tapped = course().byId[id];
+    if (tapped) speak(tapped.tgt, course().tts);
+  }
   if (!sess.picked) { sess.picked = token; render(); return; }
   const parts = sess.picked.split(":"), pSide = parts[0], pId = parts[1];
   if (pSide === side) { sess.picked = token; render(); return; }
@@ -1677,7 +1716,8 @@ function tapPair(btn, ex){
     sess.matched.push(id);
     sess.picked = null;
     gradeItem(id, true);
-    const it = course().byId[id];
+    /* The target side already read itself out on the tap. */
+    const it = side === "en" ? course().byId[id] : null;
     if (it) speak(it.tgt, course().tts);
     save();
     if (sess.matched.length === ex.pairs.length) {

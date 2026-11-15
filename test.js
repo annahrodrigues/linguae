@@ -115,7 +115,7 @@ const EXPORTS = `
   buildLesson: buildLesson, buildPractice: buildPractice,
   startLesson: startLesson, startPractice: startPractice,
   submit: submit, advance: advance, tapPair: tapPair,
-  hasVoiceFor: hasVoiceFor, voiceFor: voiceFor, speak: speak,
+  hasVoiceFor: hasVoiceFor, voiceFor: voiceFor, speak: speak, pickAudio: pickAudio,
   state: function(){ return S; },
   session: function(){ return sess; },
   setActive: function(lg){ S.active = lg; }
@@ -472,6 +472,30 @@ test("a lesson speaks the answer with the course's own voice", function () {
   assert.ok(a.spoken.length > 0, "a right answer should be read back");
   a.spoken.forEach(function (u) {
     assert.strictEqual(u.voice.name, NEURAL_FR.name, "never the Portuguese voice");
+  });
+});
+
+test("tapping an option reads the target language, never the English", function () {
+  const a = loadApp({ voices: [NEURAL_FR] });
+  a.setActive("fr");
+  const c = a.course();
+  const item = c.items[0];
+
+  /* Options in French: the one that was tapped is what should be heard. */
+  let ex = null;
+  for (let i = 0; i < 60 && !ex; i++) {
+    const made = a.makeExercise(item, 0, c, false);
+    if (made.kind === "pick_tgt") ex = made;
+  }
+  assert.ok(ex, "no pick_tgt exercise was built");
+  ex.options.forEach(function (o) {
+    assert.strictEqual(a.pickAudio(ex, o.id), o.tgt);
+  });
+
+  /* Options in English: the French prompt is what should be heard. */
+  const asking = { kind: "pick_en", item: item, options: ex.options, answer: item.id };
+  asking.options.forEach(function (o) {
+    assert.strictEqual(a.pickAudio(asking, o.id), item.tgt, "the prompt, not the English option");
   });
 });
 
