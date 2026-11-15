@@ -116,8 +116,9 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
   font-size:13px;font-weight:600;cursor:default}
 button.pill{cursor:pointer;transition:border-color var(--t)}
 button.pill:hover{border-color:var(--color-primary-ink)}
-.code{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;flex:none;
-  font-family:var(--font-heading);font-weight:600;font-size:11.5px;color:#fff}
+.code{width:26px;height:26px;border-radius:8px;flex:none;overflow:hidden;
+  box-shadow:inset 0 0 0 1px rgba(37,61,54,.18)}
+.code svg{display:block;width:100%;height:100%}
 
 /* ---------- shell: sidebar on desktop, tab bar on phones ---------- */
 .shell{display:flex;min-height:100%;flex:1}
@@ -386,7 +387,7 @@ main{flex:1;width:100%;max-width:1200px;margin:0 auto;padding-block:28px 64px;
   background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-card);
   padding:14px;transition:border-color var(--t),box-shadow var(--t),transform var(--t)}
 .pickrow:hover{border-color:var(--color-primary-ink);box-shadow:var(--shadow-soft);transform:translateY(-2px)}
-.pickrow .code{width:38px;height:38px;border-radius:11px;font-size:14px}
+.pickrow .code{width:38px;height:38px;border-radius:11px}
 .pickrow strong{display:block;font-family:var(--font-heading);font-weight:600;font-size:17px}
 .pickrow small{color:var(--color-text-muted);font-size:13px}
 .chips{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
@@ -833,6 +834,33 @@ function cham(expr, size){ return mascotImg(expr, size || 150); }
 /* ============================== ACHIEVEMENTS ==============================
    Gamification that rewards progress and never shames a miss.              */
 
+/* ---------- flags ----------
+   Drawn here rather than taken from emoji: Windows has no flag glyphs, so the
+   regional-indicator pairs fall back to the two letters we are replacing. Each
+   one is square, since the tile is, and the bands keep their real proportions.
+   Latin has no country, so it flies the Vatican's, the one state that still
+   makes it official. Its crossed keys are left off: at 26 pixels the emblem
+   turned to mush and read as a pair of scissors, and the gold-and-white halves
+   already tell it apart from the other four. */
+const FLAGS = {
+  es: '<svg viewBox="0 0 20 20" aria-hidden="true"><rect width="20" height="20" fill="#F1BF00"/>'
+    + '<rect width="20" height="5" fill="#AA151B"/><rect y="15" width="20" height="5" fill="#AA151B"/></svg>',
+  fr: '<svg viewBox="0 0 20 20" aria-hidden="true"><rect width="20" height="20" fill="#FFFFFF"/>'
+    + '<rect width="6.67" height="20" fill="#000091"/><rect x="13.33" width="6.67" height="20" fill="#E1000F"/></svg>',
+  de: '<svg viewBox="0 0 20 20" aria-hidden="true"><rect width="20" height="20" fill="#FFCE00"/>'
+    + '<rect width="20" height="6.67" fill="#111111"/><rect y="6.67" width="20" height="6.67" fill="#DD0000"/></svg>',
+  it: '<svg viewBox="0 0 20 20" aria-hidden="true"><rect width="20" height="20" fill="#F4F5F0"/>'
+    + '<rect width="6.67" height="20" fill="#008C45"/><rect x="13.33" width="6.67" height="20" fill="#CD212A"/></svg>',
+  la: '<svg viewBox="0 0 20 20" aria-hidden="true"><rect width="20" height="20" fill="#FFFFFF"/>'
+    + '<rect width="10" height="20" fill="#FFE000"/>'
+    + '</svg>'
+};
+
+/* The course name is always written beside the flag, so the tile is decorative. */
+function flagTile(lg){
+  return '<span class="code">' + FLAGS[lg] + '</span>';
+}
+
 const ACHIEVEMENTS = [
   { id:"first",  icon:"hiking",               name:"First steps",   desc:"Finish your first lesson",
     test:function(x){ return x.done >= 1; } },
@@ -1112,7 +1140,7 @@ function viewPicker(){
     const c = COURSES[lg], p = S.courses[lg];
     const started = c.lessons.filter(function(l){ return (p.crowns[l.id] || 0) > 0; }).length;
     return '<button class="pickrow" data-lang="' + lg + '">'
-      + '<span class="code" style="background:' + c.tint + '">' + c.code + '</span>'
+      + flagTile(lg)
       + '<span style="flex:1;min-width:0"><strong>' + esc(c.name) + '</strong><small>'
       + esc(c.nativeName) + ' · '
       + (p.xp ? p.xp + ' XP · ' + started + ' of ' + c.lessons.length + ' lessons'
@@ -1165,7 +1193,7 @@ function shell(){
         + '<span class="spacer"></span>'
     + '<div class="counters">'
     + '<button class="pill" id="switch" title="Change course">'
-    + '<span class="code" style="background:' + c.tint + '">' + c.code + '</span>' + esc(c.name) + '</button>'
+    + flagTile(S.active) + esc(c.name) + '</button>'
     + '<span class="counter" style="color:var(--color-accent-ink)" title="Day streak">'
     + ic("local_fire_department", "ms--sm") + S.streak + '</span>'
     + '<span class="counter" style="color:var(--color-primary-ink)" title="Total XP">'
