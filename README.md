@@ -1,69 +1,74 @@
 # Linguae
 
-Um app de aprendizado de idiomas no espírito do Duolingo: trilha de lições, repetição
-espaçada, vidas, ofensiva e conquistas. Cinco cursos, todos ensinados **a partir do
-inglês** — espanhol, francês, alemão, italiano e latim.
+A language-learning app in the spirit of Duolingo: a lesson trail, spaced
+repetition, hearts, a streak and achievements. Five courses, every one of them
+taught **from English** — Spanish, French, German, Italian and Latin.
 
-A interface é em inglês. O mascote é o **Leon**, um camaleão.
+The interface is in English. The mascot is **Leon**, a chameleon.
 
 **App:** https://claude.ai/artifact/Fzbcf54MKVHHP2DgNhnv9K
 
-## Rodando
+## Running it
 
-Não há build, dependências nem servidor. O app inteiro é um arquivo HTML com a pasta
-`assets/` ao lado:
+There is no build step, no dependency and no server to configure. The whole app
+is one HTML file with the `assets/` folder beside it:
 
 ```bash
 python -m http.server 8000
 ```
 
-E abra `http://localhost:8000/linguae.html`.
+Then open `http://localhost:8000/linguae.html`.
 
-Abrir o arquivo direto por `file://` também funciona, mas o navegador bloqueia parte
-das fontes e dos ícones, então prefira servir por HTTP.
+Opening the file straight from `file://` works too, but the browser blocks some
+of the fonts and icons, so serving it over HTTP is better.
 
-## O que tem dentro
+## What is in it
 
 | | |
 |---|---|
-| **Cursos** | 5 idiomas, 7 unidades e 14 lições cada, 112 palavras e frases por curso |
-| **Exercícios** | 6 tipos: associar pares, escolher a tradução nos dois sentidos, ouvir e transcrever, montar com banco de palavras, e digitar livre |
-| **Correção** | acentos e pontuação são normalizados, e um erro de digitação de uma letra conta como acerto, com aviso |
-| **Repetição espaçada** | caixas de Leitner com intervalos de 1, 3, 7, 16 e 35 dias; errou, a palavra volta para a caixa 2 e reaparece na mesma sessão |
-| **Progresso** | 5 coroas por lição, XP, meta diária de 30 XP, ofensiva por dia e 9 conquistas |
-| **Vidas** | 5 por lição; acabou, a lição recomeça |
-| **Áudio** | `speechSynthesis` do navegador; se não houver voz instalada para o idioma, os exercícios de escuta somem sozinhos |
-| **Acessibilidade** | todos os pares de texto passam no contraste AA (4.5:1) nos dois temas |
+| **Courses** | 5 languages, 7 units and 14 lessons each, 112 words and phrases per course |
+| **Exercises** | 6 kinds: match the pairs, pick the translation in either direction, listen and transcribe, build from a word bank, and free typing |
+| **Marking** | accents and punctuation are normalised, and a one-letter typo counts as correct, with a note |
+| **Spaced repetition** | Leitner boxes at 1, 3, 7, 16 and 35 days; get one wrong and the word drops to box 2 and comes back in the same session |
+| **Progress** | 5 crowns per lesson, XP, a daily goal of 30 XP, a day streak and 9 achievements |
+| **Hearts** | 5 per lesson; run out and the lesson restarts |
+| **Audio** | the browser's `speechSynthesis`; with no voice installed for a language, its listening exercises take themselves out |
+| **Accessibility** | every pair of text colours clears AA contrast (4.5:1) in both themes |
 
-O progresso fica no `localStorage`, por curso, na chave `lingua-trail-v1`. Não há
-conta, backend nem rede — fechar a aba não perde nada, trocar de navegador sim.
+Progress lives in `localStorage`, one record per course, under the key
+`lingua-trail-v1`. There is no account, no backend and no network call — closing
+the tab loses nothing, switching browsers loses everything.
 
-## Identidade visual
+## Visual identity
 
-O visual segue o **Linguae Brand Book 1.0** e o **React UI Kit 2.2**, que estão neste
-repositório como referência:
+The look follows the **Linguae Brand Book 1.0** and the **React UI Kit 2.2**,
+both kept in this repository for reference:
 
-- Cores, tipografia (Outfit e DM Sans) e componentes saem do `src/styles.css` do kit
-- O símbolo é o monograma vetorial *Hidden Chameleon L* (`linguae-monogram.svg`)
-- As expressões do Leon vêm do Kit de Identidade Visual, reduzidas para a web
-- O verde de marca `#248F70` é a referência; na interface o texto usa `#1D7A5F`,
-  que é o mesmo verde escurecido o suficiente para passar no AA
+- Colours, type (Outfit and DM Sans) and components come from the kit's `src/styles.css`
+- The symbol is the vector *Hidden Chameleon L* monogram (`linguae-monogram.svg`)
+- Leon's expressions come from the visual identity kit, shrunk down for the web
+- Brand green `#248F70` is the reference; in the interface text uses `#1D7A5F`,
+  the same green darkened just enough to clear AA
 
-## Estrutura
+The five course tiles carry flags, drawn as inline SVG rather than emoji —
+Windows has no glyphs for the regional-indicator pairs and falls back to the two
+letters. Latin has no country, so it carries a Roman laurel on vermilion.
+
+## Layout
 
 ```
-linguae.html                  o app inteiro
-assets/                       o que a página carrega
-Linguae_Brand_Kit_1.0.pdf     o manual da marca
-Linguae_Kit_Identidade_Visual/  mascote e logo em alta
-Linguae_React_UI_Kit_2.2/     o design system em React, de onde vêm os tokens
-Linguae_UI_Kit_1.0/           o protótipo HTML/CSS/JS original
+linguae.html                    the whole app
+assets/                         what the page loads
+Linguae_Brand_Kit_1.0.pdf       the brand manual
+Linguae_Kit_Identidade_Visual/  mascot and logo at full size
+Linguae_React_UI_Kit_2.2/       the React design system the tokens come from
+Linguae_UI_Kit_1.0/             the original HTML/CSS/JS prototype
 ```
 
-Dentro do `linguae.html` a ordem é: conteúdo dos cursos, índice, estado, helpers,
-assets de marca, conquistas, voz, construtor de exercícios, sessão, telas e render.
+Inside `linguae.html` the order is: course content, index, state, helpers, brand
+assets, achievements, speech, exercise builder, session, views and render.
 
-## Licença
+## Licence
 
-A marca Linguae, o Leon e o material dos kits são do autor do projeto e não estão
-cobertos por licença aberta.
+The Linguae brand, Leon and the material in the kits belong to the project's
+author and are not covered by an open licence.
