@@ -39,6 +39,25 @@ Progress lives in `localStorage`, one record per course, under the key
 `lingua-trail-v1`. There is no account, no backend and no network call — closing
 the tab loses nothing, switching browsers loses everything.
 
+## Tests
+
+The engine runs under Node against small stand-ins for the browser, so there is
+nothing to install and no build to run first:
+
+```bash
+node test.js
+```
+
+Thirty-odd cases, aimed at what fails quietly rather than at what is obvious on
+screen: the review schedule and its intervals, how a typed answer is marked
+(accents, punctuation, a one-letter slip), what a session does to crowns, XP,
+hearts and the streak, and the shape of the course content. A broken schedule
+still renders a perfectly good lesson, which is exactly why it needs a test.
+
+Point `LINGUAE_PAGE` at another copy of the page to run the suite against it —
+useful for checking that the tests still fail when you break something on
+purpose.
+
 ## Visual identity
 
 The look follows the **Linguae Brand Book 1.0** and the **React UI Kit 2.2**,
