@@ -83,6 +83,32 @@ m4a, ogg, opus or wav works, as long as the whole set uses the same one — the
 manifest carries the extension and the app builds the URL from it. Files whose
 name matches no item are reported and left out.
 
+### The clips in here were made with Kokoro-82M
+
+[Kokoro-82M](https://huggingface.co/hexgrad/Kokoro-82M) is an 82-million-parameter
+text-to-speech model under Apache-2.0. It runs on the CPU of an ordinary laptop,
+so the recordings cost nothing per character and need no API key.
+
+```bash
+pip install kokoro-onnx soundfile misaki espeakng-loader
+# weights into tools/models/, from the model-files-v1.1 release of
+# https://github.com/thewh1teagle/kokoro-onnx
+python tools/kokoro.py --voices     # the voice used for each course
+python tools/kokoro.py --all        # record everything it can speak
+node tools/audio.js manifest
+```
+
+| | |
+|---|---|
+| French | `ff_siwis` |
+| Spanish | `ef_dora` |
+| Italian | `if_sara` |
+| Latin | `if_sara`, the Italian voice — the ecclesiastical reading, and what the app already asked of `speechSynthesis` |
+| German | **none.** Kokoro v1.0 speaks eight languages and German is not one of them, so that course stays on the visitor's own system voice |
+
+The weights are around 350 MB and are not committed; `tools/models/` is ignored
+and `tools/kokoro.py` says where to fetch them. The clips themselves are 448 clips, 4.3 MB in all.
+
 `assets/audio/index.json` is the whole contract. Without it the app never asks
 for a clip, so the feature costs nothing until the first file lands. Recording
 a language also switches its listening exercises back on, item by item.
@@ -108,6 +134,7 @@ letters. Latin has no country, so it carries a Roman laurel on vermilion.
 index.html                      the whole app
 test.js                         the engine's tests
 tools/audio.js                  list what to record, index what is recorded
+tools/kokoro.py                 record it with Kokoro-82M, on this machine
 assets/                         what the page loads
 assets/audio/                   recorded clips, if any, plus their index.json
 Linguae_Brand_Kit_1.0.pdf       the brand manual

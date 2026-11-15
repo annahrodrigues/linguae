@@ -13,3 +13,6 @@ dist/
 Thumbs.db
 desktop.ini
 .DS_Store
+
+# Kokoro weights, fetched by tools/kokoro.py; too big to commit and easy to refetch.
+tools/models/
