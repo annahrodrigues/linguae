@@ -1,0 +1,15 @@
+# The same eight mascot PNGs already live in Linguae_Kit_Identidade_Visual/01_Mascote.
+mascot/
+
+# Working export of the symbol; the published art is assets/logo-symbol.svg.
+logo.png
+
+# Node, in case a kit is ever installed for a look
+node_modules/
+.vite/
+dist/
+
+# OS noise
+Thumbs.db
+desktop.ini
+.DS_Store

@@ -1,0 +1,7 @@
+import React from 'react';
+export function Button({children,variant='primary',className='',...props}){return <button className={`btn btn-${variant} ${className}`} {...props}>{children}</button>}
+export function Card({children,className='',...props}){return <article className={`card ${className}`} {...props}>{children}</article>}
+export function Progress({value=0,label}){const safe=Math.min(100,Math.max(0,Number(value)||0));return <div className="progress" role="progressbar" aria-label={label||'Progresso'} aria-valuenow={safe} aria-valuemin="0" aria-valuemax="100"><span style={{width:`${safe}%`}}/></div>}
+export function TextField({label,error,id,...props}){return <div><label className="field-label" htmlFor={id}>{label}</label><input id={id} className={`input ${error?'invalid':''}`} aria-invalid={!!error} aria-describedby={error?`${id}-error`:undefined} {...props}/>{error&&<small id={`${id}-error`} className="error">{error}</small>}</div>}
+export function PageHead({eyebrow,title,description,extra}){return <div className="page-head"><div><div className="eyebrow">{eyebrow}</div><h1>{title}</h1><p>{description}</p></div>{extra}</div>}
+export function Stat({icon,label,value,detail,progress}){return <Card className="stat"><div className="stat-icon mint">{icon}</div><div className="muted">{label}</div><strong>{value}</strong>{progress!==undefined?<Progress value={progress} label={label}/>:<p>{detail}</p>}</Card>}

@@ -1,0 +1,12 @@
+LINGUAE — PACOTE DE IDENTIDADE VISUAL
+
+01_Mascote: ilustrações PNG do personagem e suas expressões, com transparência quando presente no arquivo original.
+02_Identidade_Visual: painéis de apresentação do logo e refinamento, em PNG.
+
+IMPORTANTE: As variações de logo apresentadas nos painéis ainda não são arquivos individuais vetoriais. Não há SVGs neste pacote. Os painéis são propostas visuais, não arquivos finais de produção.
+
+Paleta de referência:
+Forest Green #248F70 | Soft Mint #A8DDBB | Warm Cream #F5EBCB
+Golden Yellow #F2B85B | Deep Forest #253D36 | Soft Coral #F28B75
+Background #F8F7F0
+Tipografia proposta: Outfit Bold e DM Sans (fontes não incluídas).
