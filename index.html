@@ -989,6 +989,64 @@ function speak(text, lang){
 
 function hasVoiceFor(lang){ return !!voiceFor(lang); }
 
+/* ---- recorded audio ----
+   A clip committed to the repository beats the system voice: it sounds the
+   same for everyone and does not depend on what each machine happens to have
+   installed, which is the whole problem with speech synthesis for a language
+   course. assets/audio/index.json lists the clips that exist; with no manifest
+   the app falls back to the voice, so this costs nothing until a file lands. */
+const AUDIO = { format: "mp3", have: {}, byLang: {} };
+let clipEl = null;
+
+function loadClips(){
+  if (typeof fetch !== "function") return;
+  fetch("assets/audio/index.json", { cache: "no-cache" })
+    .then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(m){
+      if (!m || !Array.isArray(m.items)) return;
+      if (m.format) AUDIO.format = String(m.format).replace(/[^a-z0-9]/gi, "");
+      m.items.forEach(function(id){
+        AUDIO.have[id] = true;
+        const lg = String(id).split("-")[0];
+        AUDIO.byLang[lg] = (AUDIO.byLang[lg] || 0) + 1;
+      });
+      /* Clips can switch listening exercises on, so the trail is redrawn. */
+      if (!sess && S.active) render();
+    })
+    .catch(function(){});
+}
+
+function clipFor(item){
+  if (!item || !item.id || !AUDIO.have[item.id]) return null;
+  return "assets/audio/" + String(item.id).split("-")[0] + "/" + item.id + "." + AUDIO.format;
+}
+
+function playClip(url){
+  try {
+    if (canSpeak) window.speechSynthesis.cancel();
+    if (!clipEl) clipEl = new Audio();
+    clipEl.pause();
+    clipEl.src = url;
+    clipEl.currentTime = 0;
+    const p = clipEl.play();
+    if (p && p.catch) p.catch(function(){});
+    return true;
+  } catch (e) { return false; }
+}
+
+/* Read an item aloud: its own clip when there is one, the voice otherwise. */
+function sayItem(item, lang){
+  if (!item) return;
+  const url = clipFor(item);
+  if (url && playClip(url)) return;
+  speak(item.tgt, lang);
+}
+
+/* One item, by either route. */
+function canHear(item, lang){ return !!clipFor(item) || hasVoiceFor(lang); }
+/* A whole course, for the note on the trail. */
+function courseHasAudio(c){ return hasVoiceFor(c.tts) || (AUDIO.byLang[c.id] || 0) > 0; }
+
 /* ============================== EXERCISE BUILDER ============================== */
 
 function pickKind(item, level, audioOk){
@@ -1028,23 +1086,23 @@ function makeExercise(item, level, c, audioOk){
 }
 
 function buildLesson(lesson, c, level){
-  const audioOk = hasVoiceFor(c.tts);
   const items = shuffle(lesson.items);
   const queue = [];
   if (lesson.kind === "w" && items.length >= 5) {
     queue.push({ kind: "match", id: lesson.id + "-match", pairs: sample(items, 5) });
   }
-  items.slice(0, 10).forEach(function(it){ queue.push(makeExercise(it, level, c, audioOk)); });
+  items.slice(0, 10).forEach(function(it){
+    queue.push(makeExercise(it, level, c, canHear(it, c.tts)));
+  });
   return queue;
 }
 
 function buildPractice(c){
-  const audioOk = hasVoiceFor(c.tts);
   const due = dueItems();
   const weak = course().items.filter(function(it){ const r = prog().srs[it.id]; return r && r.seen > 0 && due.indexOf(it) === -1; })
     .sort(function(a, b){ return srsOf(a.id).box - srsOf(b.id).box; });
   const picked = due.slice(0, 10).concat(weak.slice(0, Math.max(0, 10 - Math.min(due.length, 10))));
-  return shuffle(picked).map(function(it){ return makeExercise(it, 2, c, audioOk); });
+  return shuffle(picked).map(function(it){ return makeExercise(it, 2, c, canHear(it, c.tts)); });
 }
 
 /* ============================== SESSION ============================== */
@@ -1110,14 +1168,14 @@ function submit(){
   if (ex.item) gradeItem(ex.item.id, ok);
   /* a missed item comes back at the end of the session, in an easier shape */
   if (!ok && ex.item) {
-    const retry = makeExercise(ex.item, 0, course(), hasVoiceFor(course().tts));
+    const retry = makeExercise(ex.item, 0, course(), canHear(ex.item, course().tts));
     retry.retry = true;
     sess.queue.push(retry);
   }
   sess.lastOk = ok;
   sess.state = "feedback";
   save();
-  if (ok && ex.item && ex.kind !== "pick_en") speak(ex.item.tgt, course().tts);
+  if (ok && ex.item && ex.kind !== "pick_en") sayItem(ex.item, course().tts);
   render();
   if (sess.hearts <= 0) { sess.state = "dead"; render(); }
 }
@@ -1351,7 +1409,7 @@ function pageLearn(){
 
   return '<div class="page"><div class="learn-layout">'
     + '<div class="learn-main">' + main
-    + '<p class="small-note">' + (hasVoiceFor(c.tts)
+    + '<p class="small-note">' + (courseHasAudio(c)
         ? "Tap the speaker beside any " + esc(c.name) + " word to hear it read aloud."
         : "No " + esc(c.name) + " speech voice is installed, so the audio is off rather than read in "
           + "the wrong accent. On Windows: Settings &rsaquo; Time &amp; language &rsaquo; Language &amp; region "
@@ -1500,10 +1558,10 @@ function viewLesson(){
 }
 
 function romOf(it){ return it.rom ? '<span class="rom">' + esc(it.rom) + '</span>' : ""; }
-function spkBtn(text, cls){
-  if (!hasVoiceFor(course().tts)) return "";
-  return '<button class="speak ' + (cls || "") + '" data-say="' + esc(text) + '" aria-label="Play audio">'
-    + ic("volume_up") + '</button>';
+function spkBtn(item, cls){
+  if (!item || !canHear(item, course().tts)) return "";
+  return '<button class="speak ' + (cls || "") + '" data-item="' + esc(item.id)
+    + '" aria-label="Play audio">' + ic("volume_up") + '</button>';
 }
 function qhead(tag, title){
   return '<div class="qtag">' + tag + '</div><h2 class="qlabel">' + title + '</h2>';
@@ -1530,18 +1588,17 @@ function bodyFor(ex, locked){
   if (ex.kind === "pick_tgt") {
     return qhead("Choose the right answer", "How do you say this in " + esc(c.name) + "?")
       + '<div class="prompt">' + mascotImg("curious", 76) + '<div class="bubble">' + esc(ex.item.en) + '</div></div>'
-      + optList(ex, locked, function(it){ return esc(it.tgt) + romOf(it); },
-                function(it){ return it.tgt; });
+      + optList(ex, locked, function(it){ return esc(it.tgt) + romOf(it); }, true);
   }
   if (ex.kind === "pick_en") {
     return qhead("Choose the right answer", "What does this mean?")
-      + '<div class="prompt">' + spkBtn(ex.item.tgt)
+      + '<div class="prompt">' + spkBtn(ex.item)
       + '<div class="bubble" style="font-size:21px">' + esc(ex.item.tgt) + romOf(ex.item) + '</div></div>'
       + optList(ex, locked, function(it){ return esc(it.en); });
   }
   if (ex.kind === "listen") {
     return qhead("Listening", "Listen, then choose the meaning")
-      + spkBtn(ex.item.tgt, "speak--hero")
+      + spkBtn(ex.item, "speak--hero")
       + optList(ex, locked, function(it){ return esc(it.en); });
   }
   if (ex.kind === "bank") {
@@ -1569,15 +1626,15 @@ function bodyFor(ex, locked){
     + '<p class="hint">' + note + '</p>';
 }
 
-/* `say` is given when the options themselves are in the target language. The
+/* `spoken` is set when the options themselves are in the target language. The
    speaker cannot live inside the option, since a button may not nest, so the
    pair sits in a row together. */
-function optList(ex, locked, label, say){
+function optList(ex, locked, label, spoken){
   return '<div class="answers">' + ex.options.map(function(it, i){
     const btn = '<button class="answer' + optCls(it.id, ex, locked) + '" data-pick="' + it.id + '"'
       + (locked ? " disabled" : "") + '><kbd>' + "ABCD".charAt(i) + '</kbd><span>' + label(it) + '</span></button>';
-    if (!say) return btn;
-    const spk = spkBtn(say(it), "speak--sm");
+    if (!spoken) return btn;
+    const spk = spkBtn(it, "speak--sm");
     return spk ? '<div class="answer-row">' + btn + spk + '</div>' : btn;
   }).join("") + '</div>';
 }
@@ -1586,10 +1643,9 @@ function optList(ex, locked, label, say){
    either way rather than an English answer being read back. */
 function pickAudio(ex, id){
   if (ex.kind === "pick_tgt") {
-    const chosen = ex.options.filter(function(o){ return o.id === id; })[0];
-    return chosen ? chosen.tgt : "";
+    return ex.options.filter(function(o){ return o.id === id; })[0] || null;
   }
-  return ex.item ? ex.item.tgt : "";
+  return ex.item || null;
 }
 
 function optCls(id, ex, locked){
@@ -1623,7 +1679,7 @@ function footFor(ex){
       + '<span class="fbicon">' + ic(ok ? "check_circle" : "cancel") + '</span>'
       + '<span class="fbtext"><b>' + title + '</b>'
       + (ok && !sess.typo ? "" : '<small>' + esc(answer)
-          + (ex.item ? spkBtn(ex.item.tgt, "speak--sm") : "") + '</small>') + '</span>'
+          + (ex.item ? spkBtn(ex.item, "speak--sm") : "") + '</small>') + '</span>'
       + '<img class="foot-leon" src="' + MASCOT[ok ? "celebrating" : "thinking"]
       + '" alt="Leon, the Linguae chameleon">'
       + '<button class="btn btn--primary" id="cont">Continue</button></div>';
@@ -1654,19 +1710,20 @@ function skipQuestion(){
 function wireLesson(){
   const q = document.getElementById("quit");
   if (q) q.addEventListener("click", quitLesson);
-  app.querySelectorAll("[data-say]").forEach(function(b){
-    b.addEventListener("click", function(){ speak(b.getAttribute("data-say"), course().tts); });
+  app.querySelectorAll("[data-item]").forEach(function(b){
+    b.addEventListener("click", function(){
+      sayItem(course().byId[b.getAttribute("data-item")], course().tts);
+    });
   });
   const ex = currentEx();
   if (ex.kind === "listen" && sess.state === "ask" && !sess.spoke) {
     sess.spoke = true;
-    speak(ex.item.tgt, course().tts);
+    sayItem(ex.item, course().tts);
   }
   app.querySelectorAll("[data-pick]").forEach(function(b){
     b.addEventListener("click", function(){
       sess.sel = b.getAttribute("data-pick");
-      const heard = pickAudio(ex, sess.sel);
-      if (heard) speak(heard, course().tts);
+      sayItem(pickAudio(ex, sess.sel), course().tts);
       render();
     });
   });
@@ -1707,7 +1764,7 @@ function tapPair(btn, ex){
   if (sess.matched.indexOf(id) > -1) return;
   if (side === "tgt") {
     const tapped = course().byId[id];
-    if (tapped) speak(tapped.tgt, course().tts);
+    if (tapped) sayItem(tapped, course().tts);
   }
   if (!sess.picked) { sess.picked = token; render(); return; }
   const parts = sess.picked.split(":"), pSide = parts[0], pId = parts[1];
@@ -1718,7 +1775,7 @@ function tapPair(btn, ex){
     gradeItem(id, true);
     /* The target side already read itself out on the tap. */
     const it = side === "en" ? course().byId[id] : null;
-    if (it) speak(it.tgt, course().tts);
+    if (it) sayItem(it, course().tts);
     save();
     if (sess.matched.length === ex.pairs.length) {
       sess.correct++; sess.answered++;
@@ -1814,6 +1871,7 @@ if (canSpeak) {
   setTimeout(onVoices, 1200);
 }
 
+loadClips();
 render();
 </script>
 </body>

@@ -34,7 +34,7 @@ Pages from building anything and has it copy them across as they are.
 | **Spaced repetition** | Leitner boxes at 1, 3, 7, 16 and 35 days; get one wrong and the word drops to box 2 and comes back in the same session |
 | **Progress** | 5 crowns per lesson, XP, a daily goal of 30 XP, a day streak and 9 achievements |
 | **Hearts** | 5 per lesson; run out and the lesson restarts |
-| **Audio** | the browser's `speechSynthesis`, at the natural rate, on the best voice the system offers for the language — a neural or Google voice over a legacy one; with none installed the course goes quiet rather than borrow another language's voice, and its listening exercises take themselves out |
+| **Audio** | a recorded clip when the repository has one, otherwise the browser's `speechSynthesis` at the natural rate, on the best voice the system offers — a neural or Google voice over a legacy one; with neither, that word goes quiet rather than be read in another language's accent |
 | **Accessibility** | every pair of text colours clears AA contrast (4.5:1) in both themes |
 
 Progress lives in `localStorage`, one record per course, under the key
@@ -60,6 +60,33 @@ Point `LINGUAE_PAGE` at another copy of the page to run the suite against it —
 useful for checking that the tests still fail when you break something on
 purpose.
 
+## Recorded audio
+
+Speech synthesis is the weak point of a language course: it depends on what
+each visitor happens to have installed, and a machine with no French voice will
+either say nothing or, worse, read French through whatever voice is default.
+
+So a clip in the repository wins. Drop a file at
+`assets/audio/<lang>/<item-id>.mp3` and the app plays it instead of the voice,
+for everyone, the same way. Anything not recorded falls back to synthesis, so a
+course can be filled in a few words at a time.
+
+```bash
+node tools/audio.js list fr > fr.tsv   # id, BCP-47 tag and text, one row each
+node tools/audio.js manifest           # scan the folder, write assets/audio/index.json
+node tools/audio.js status             # how much of each course is recorded
+```
+
+Send the TSV through whatever text-to-speech you prefer, save each row as
+`<id>.<ext>` under `assets/audio/<lang>/`, and run `manifest`. Any one of mp3,
+m4a, ogg, opus or wav works, as long as the whole set uses the same one — the
+manifest carries the extension and the app builds the URL from it. Files whose
+name matches no item are reported and left out.
+
+`assets/audio/index.json` is the whole contract. Without it the app never asks
+for a clip, so the feature costs nothing until the first file lands. Recording
+a language also switches its listening exercises back on, item by item.
+
 ## Visual identity
 
 The look follows the **Linguae Brand Book 1.0** and the **React UI Kit 2.2**,
@@ -79,7 +106,10 @@ letters. Latin has no country, so it carries a Roman laurel on vermilion.
 
 ```
 index.html                      the whole app
+test.js                         the engine's tests
+tools/audio.js                  list what to record, index what is recorded
 assets/                         what the page loads
+assets/audio/                   recorded clips, if any, plus their index.json
 Linguae_Brand_Kit_1.0.pdf       the brand manual
 Linguae_Kit_Identidade_Visual/  mascot and logo at full size
 Linguae_React_UI_Kit_2.2/       the React design system the tokens come from

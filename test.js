@@ -116,6 +116,8 @@ const EXPORTS = `
   startLesson: startLesson, startPractice: startPractice,
   submit: submit, advance: advance, tapPair: tapPair,
   hasVoiceFor: hasVoiceFor, voiceFor: voiceFor, speak: speak, pickAudio: pickAudio,
+  AUDIO: AUDIO, clipFor: clipFor, sayItem: sayItem, canHear: canHear,
+  courseHasAudio: courseHasAudio,
   state: function(){ return S; },
   session: function(){ return sess; },
   setActive: function(lg){ S.active = lg; }
@@ -144,6 +146,15 @@ function loadApp(options) {
     removeEventListener() {}
   };
   const spoken = [];
+  const played = [];
+  sandbox.Audio = function () {
+    return {
+      src: "",
+      currentTime: 0,
+      pause() {},
+      play() { played.push(this.src); return { catch() {} }; }
+    };
+  };
   if (opts.voices) {
     win.speechSynthesis = {
       getVoices() { return opts.voices; },
@@ -172,6 +183,16 @@ function loadApp(options) {
   api.reseed = sandbox.__reseed;
   api.answerBox = dom.byId;
   api.spoken = spoken;
+  api.played = played;
+  /* Stands in for the manifest, which arrives over fetch in a browser. */
+  api.addClips = function (ids, format) {
+    if (format) api.AUDIO.format = format;
+    ids.forEach(function (id) {
+      api.AUDIO.have[id] = true;
+      const lg = id.split("-")[0];
+      api.AUDIO.byLang[lg] = (api.AUDIO.byLang[lg] || 0) + 1;
+    });
+  };
   api.typeAnswer = function (text) {
     const el = makeElement("textarea");
     el.value = text;
@@ -489,14 +510,98 @@ test("tapping an option reads the target language, never the English", function 
   }
   assert.ok(ex, "no pick_tgt exercise was built");
   ex.options.forEach(function (o) {
-    assert.strictEqual(a.pickAudio(ex, o.id), o.tgt);
+    assert.strictEqual(a.pickAudio(ex, o.id).id, o.id);
   });
 
   /* Options in English: the French prompt is what should be heard. */
   const asking = { kind: "pick_en", item: item, options: ex.options, answer: item.id };
   asking.options.forEach(function (o) {
-    assert.strictEqual(a.pickAudio(asking, o.id), item.tgt, "the prompt, not the English option");
+    assert.strictEqual(a.pickAudio(asking, o.id).id, item.id, "the prompt, not the English option");
   });
+});
+
+/* ---------- recorded clips ---------- */
+
+test("a clip's address is built from the item's own id", function () {
+  const a = loadApp({ voices: [NEURAL_FR] });
+  a.setActive("fr");
+  const item = a.course().items[0];
+  assert.strictEqual(a.clipFor(item), null, "nothing is recorded yet");
+  a.addClips([item.id]);
+  assert.strictEqual(a.clipFor(item), "assets/audio/fr/" + item.id + ".mp3");
+  a.AUDIO.format = "wav";
+  assert.strictEqual(a.clipFor(item), "assets/audio/fr/" + item.id + ".wav",
+    "the manifest decides the format");
+});
+
+test("a clip is played in place of the voice, and only where there is one", function () {
+  const a = loadApp({ voices: [NEURAL_FR] });
+  a.setActive("fr");
+  const items = a.course().items;
+  a.addClips([items[0].id]);
+
+  a.sayItem(items[0], "fr-FR");
+  eq(a.played, ["assets/audio/fr/" + items[0].id + ".mp3"]);
+  assert.strictEqual(a.spoken.length, 0, "the voice should not also fire");
+
+  a.sayItem(items[1], "fr-FR");
+  assert.strictEqual(a.played.length, 1, "no clip for this one");
+  assert.strictEqual(a.spoken.length, 1, "so the voice takes it");
+  assert.strictEqual(a.spoken[0].text, items[1].tgt);
+});
+
+test("a clip gives a language audio even with no voice installed", function () {
+  /* The point of the whole feature: this machine has no French voice. */
+  const a = loadApp({ voices: [BRAZIL_PT] });
+  a.setActive("fr");
+  const c = a.course();
+  const items = c.items;
+  assert.strictEqual(a.hasVoiceFor(c.tts), false);
+  assert.strictEqual(a.courseHasAudio(c), false, "nothing to hear yet");
+
+  a.addClips([items[0].id]);
+  assert.strictEqual(a.canHear(items[0], c.tts), true, "the recorded one can be heard");
+  assert.strictEqual(a.canHear(items[1], c.tts), false, "the rest still cannot");
+  assert.strictEqual(a.courseHasAudio(c), true);
+
+  a.sayItem(items[0], c.tts);
+  eq(a.played, ["assets/audio/fr/" + items[0].id + ".mp3"]);
+  assert.strictEqual(a.spoken.length, 0, "and never through the Portuguese voice");
+});
+
+test("a listening exercise follows the audio, clip or voice", function () {
+  const a = loadApp({ voices: [BRAZIL_PT] });
+  a.setActive("fr");
+  const c = a.course();
+  const item = c.items[0];
+
+  for (let i = 0; i < 80; i++) {
+    assert.notStrictEqual(a.makeExercise(item, 2, c, a.canHear(item, c.tts)).kind, "listen",
+      "no audio, no listening exercise");
+  }
+  a.addClips([item.id]);
+  let heard = false;
+  for (let i = 0; i < 200 && !heard; i++) {
+    heard = a.makeExercise(item, 2, c, a.canHear(item, c.tts)).kind === "listen";
+  }
+  assert.ok(heard, "a clip should let listening come up");
+});
+
+test("a lesson only asks you to listen to what can be heard", function () {
+  const a = loadApp({ voices: [BRAZIL_PT] });
+  a.setActive("fr");
+  const c = a.course();
+  const lesson = c.lessons[0];
+  a.addClips([lesson.items[0].id]);
+  let listens = 0;
+  for (let round = 0; round < 40; round++) {
+    a.buildLesson(lesson, c, 2).forEach(function (ex) {
+      if (ex.kind !== "listen") return;
+      listens++;
+      assert.ok(a.clipFor(ex.item), "listening was built for " + ex.item.id + ", which has no audio");
+    });
+  }
+  assert.ok(listens > 0, "the one recorded word should still come up to listen to");
 });
 
 /* ---------- a session from end to end ---------- */
