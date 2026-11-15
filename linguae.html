@@ -838,10 +838,10 @@ function cham(expr, size){ return mascotImg(expr, size || 150); }
    Drawn here rather than taken from emoji: Windows has no flag glyphs, so the
    regional-indicator pairs fall back to the two letters we are replacing. Each
    one is square, since the tile is, and the bands keep their real proportions.
-   Latin has no country, so it flies the Vatican's, the one state that still
-   makes it official. Its crossed keys are left off: at 26 pixels the emblem
-   turned to mush and read as a pair of scissors, and the gold-and-white halves
-   already tell it apart from the other four. */
+   Latin has no country, so it carries a Roman laurel on vermilion instead. The
+   wreath is built from two mirrored branches: a stem arc with leaves leaning
+   out from it and a shorter row leaning back in, spaced so the red still shows
+   between them at 26 pixels. */
 const FLAGS = {
   es: '<svg viewBox="0 0 20 20" aria-hidden="true"><rect width="20" height="20" fill="#F1BF00"/>'
     + '<rect width="20" height="5" fill="#AA151B"/><rect y="15" width="20" height="5" fill="#AA151B"/></svg>',
@@ -851,9 +851,24 @@ const FLAGS = {
     + '<rect width="20" height="6.67" fill="#111111"/><rect y="6.67" width="20" height="6.67" fill="#DD0000"/></svg>',
   it: '<svg viewBox="0 0 20 20" aria-hidden="true"><rect width="20" height="20" fill="#F4F5F0"/>'
     + '<rect width="6.67" height="20" fill="#008C45"/><rect x="13.33" width="6.67" height="20" fill="#CD212A"/></svg>',
-  la: '<svg viewBox="0 0 20 20" aria-hidden="true"><rect width="20" height="20" fill="#FFFFFF"/>'
-    + '<rect width="10" height="20" fill="#FFE000"/>'
-    + '</svg>'
+  la: '<svg viewBox="0 0 100 100" aria-hidden="true">'
+    + '<rect width="100" height="100" fill="#FD4C4A"/><g fill="#FFD203">'
+    + '<path d="M55.6 72.8 A23.0 23.0 0 0 1 28.7 41.9" fill="none" stroke="#FFD203" stroke-width="6.2" stroke-linecap="round"/>'
+    + '<path d="M0 0 Q7.6 -9.6 19.0 0 Q7.6 9.6 0 0 Z" transform="translate(43.5 70.5) rotate(150.0)"/>'
+    + '<path d="M0 0 Q8.0 -10.0 20.0 0 Q8.0 10.0 0 0 Z" transform="translate(32.6 62.2) rotate(191.0)"/>'
+    + '<path d="M0 0 Q7.2 -9.0 18.0 0 Q7.2 9.0 0 0 Z" transform="translate(29.1 49.0) rotate(232.0)"/>'
+    + '<path d="M0 0 Q5.6 -7.0 14.0 0 Q5.6 7.0 0 0 Z" transform="translate(37.1 67.7) rotate(263.0)"/>'
+    + '<path d="M0 0 Q5.2 -6.6 13.0 0 Q5.2 6.6 0 0 Z" transform="translate(29.2 56.1) rotate(299.0)"/>'
+    + '<path d="M0 0 Q4.6 -6.0 11.5 0 Q4.6 6.0 0 0 Z" transform="translate(54.6 72.0) rotate(102.0)"/>'
+    + '<g transform="translate(100 0) scale(-1 1)">'
+    + '<path d="M55.6 72.8 A23.0 23.0 0 0 1 28.7 41.9" fill="none" stroke="#FFD203" stroke-width="6.2" stroke-linecap="round"/>'
+    + '<path d="M0 0 Q7.6 -9.6 19.0 0 Q7.6 9.6 0 0 Z" transform="translate(43.5 70.5) rotate(150.0)"/>'
+    + '<path d="M0 0 Q8.0 -10.0 20.0 0 Q8.0 10.0 0 0 Z" transform="translate(32.6 62.2) rotate(191.0)"/>'
+    + '<path d="M0 0 Q7.2 -9.0 18.0 0 Q7.2 9.0 0 0 Z" transform="translate(29.1 49.0) rotate(232.0)"/>'
+    + '<path d="M0 0 Q5.6 -7.0 14.0 0 Q5.6 7.0 0 0 Z" transform="translate(37.1 67.7) rotate(263.0)"/>'
+    + '<path d="M0 0 Q5.2 -6.6 13.0 0 Q5.2 6.6 0 0 Z" transform="translate(29.2 56.1) rotate(299.0)"/>'
+    + '<path d="M0 0 Q4.6 -6.0 11.5 0 Q4.6 6.0 0 0 Z" transform="translate(54.6 72.0) rotate(102.0)"/>'
+    + '</g></g></svg>'
 };
 
 /* The course name is always written beside the flag, so the tile is decorative. */
