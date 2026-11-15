@@ -34,7 +34,7 @@ Pages from building anything and has it copy them across as they are.
 | **Spaced repetition** | Leitner boxes at 1, 3, 7, 16 and 35 days; get one wrong and the word drops to box 2 and comes back in the same session |
 | **Progress** | 5 crowns per lesson, XP, a daily goal of 30 XP, a day streak and 9 achievements |
 | **Hearts** | 5 per lesson; run out and the lesson restarts |
-| **Audio** | the browser's `speechSynthesis`; with no voice installed for a language, its listening exercises take themselves out |
+| **Audio** | the browser's `speechSynthesis`, at the natural rate, on the best voice the system offers for the language — a neural or Google voice over a legacy one; with none installed the course goes quiet rather than borrow another language's voice, and its listening exercises take themselves out |
 | **Accessibility** | every pair of text colours clears AA contrast (4.5:1) in both themes |
 
 Progress lives in `localStorage`, one record per course, under the key

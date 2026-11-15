@@ -939,27 +939,51 @@ if (canSpeak) {
   refreshVoices();
   try { window.speechSynthesis.onvoiceschanged = refreshVoices; } catch (e) {}
 }
+/* Several voices can answer for one language and they are not equal. Windows
+   ships legacy SAPI voices beside the newer neural ones, and Chrome adds its
+   own on top; getVoices returns them in install order, so taking the first
+   match lands on the worst one as often as not. Score them instead. */
+function voiceScore(v, lang){
+  const want = lang.replace("_", "-").toLowerCase();
+  const tag = (v.lang || "").replace("_", "-").toLowerCase();
+  if (tag.slice(0, 2) !== want.slice(0, 2)) return -1;
+  let score = tag === want ? 40 : 10;               /* fr-FR beats fr-CA */
+  const name = (v.name || "").toLowerCase();
+  if (name.indexOf("natural") > -1) score += 30;    /* Microsoft's neural voices */
+  if (name.indexOf("online") > -1) score += 10;
+  if (name.indexOf("google") > -1) score += 25;     /* Chrome's, far better than SAPI */
+  if (v.localService === false) score += 8;         /* network voices are the newer ones */
+  if (v.default) score += 2;
+  return score;
+}
+
+function voiceFor(lang){
+  if (!canSpeak) return null;
+  if (!voices.length) refreshVoices();
+  let best = null, bestScore = 0;
+  voices.forEach(function(v){
+    const n = voiceScore(v, lang);
+    if (n > bestScore) { best = v; bestScore = n; }
+  });
+  return best;
+}
+
 function speak(text, lang){
-  if (!canSpeak || !text) return;
+  const v = voiceFor(lang);
+  /* With no voice for this language the engine falls back to the system
+     default, which reads French with a Portuguese mouth. Silence is better. */
+  if (!canSpeak || !text || !v) return;
   try {
     const u = new SpeechSynthesisUtterance(text);
-    u.lang = lang;
-    u.rate = 0.88;
-    if (!voices.length) refreshVoices();
-    const base = lang.slice(0, 2).toLowerCase();
-    const v = voices.find(function(x){ return x.lang && x.lang.replace("_","-").toLowerCase() === lang.toLowerCase(); })
-           || voices.find(function(x){ return x.lang && x.lang.slice(0,2).toLowerCase() === base; });
-    if (v) u.voice = v;
+    u.voice = v;
+    u.lang = v.lang || lang;
+    u.rate = 1;
     window.speechSynthesis.cancel();
     window.speechSynthesis.speak(u);
   } catch (e) {}
 }
-function hasVoiceFor(lang){
-  if (!canSpeak) return false;
-  if (!voices.length) refreshVoices();
-  const base = lang.slice(0,2).toLowerCase();
-  return voices.some(function(v){ return v.lang && v.lang.slice(0,2).toLowerCase() === base; });
-}
+
+function hasVoiceFor(lang){ return !!voiceFor(lang); }
 
 /* ============================== EXERCISE BUILDER ============================== */
 

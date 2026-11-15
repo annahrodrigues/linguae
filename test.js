@@ -114,7 +114,8 @@ const EXPORTS = `
   pickKind: pickKind, makeExercise: makeExercise,
   buildLesson: buildLesson, buildPractice: buildPractice,
   startLesson: startLesson, startPractice: startPractice,
-  submit: submit, advance: advance, tapPair: tapPair, hasVoiceFor: hasVoiceFor,
+  submit: submit, advance: advance, tapPair: tapPair,
+  hasVoiceFor: hasVoiceFor, voiceFor: voiceFor, speak: speak,
   state: function(){ return S; },
   session: function(){ return sess; },
   setActive: function(lg){ S.active = lg; }
@@ -142,10 +143,11 @@ function loadApp(options) {
     addEventListener() {},
     removeEventListener() {}
   };
+  const spoken = [];
   if (opts.voices) {
     win.speechSynthesis = {
       getVoices() { return opts.voices; },
-      speak() {},
+      speak(u) { spoken.push(u); },
       cancel() {},
       addEventListener() {},
       onvoiceschanged: null
@@ -169,6 +171,7 @@ function loadApp(options) {
   const api = sandbox.__linguae;
   api.reseed = sandbox.__reseed;
   api.answerBox = dom.byId;
+  api.spoken = spoken;
   api.typeAnswer = function (text) {
     const el = makeElement("textarea");
     el.value = text;
@@ -393,6 +396,83 @@ test("a vocabulary lesson opens with a five-pair match, a phrase lesson does not
   assert.strictEqual(new Set(first.pairs.map(function (p) { return p.id; })).size, 5);
 
   assert.notStrictEqual(a.buildLesson(phrases, c, 0)[0].kind, "match");
+});
+
+/* ---------- choosing a voice ---------- */
+
+const LEGACY_FR = { name: "Microsoft Hortense - French (France)", lang: "fr-FR", localService: true };
+const NEURAL_FR = { name: "Microsoft Denise Online (Natural) - French (France)", lang: "fr-FR", localService: false };
+const GOOGLE_FR = { name: "Google français", lang: "fr-FR", localService: false };
+const CANADA_FR = { name: "Microsoft Claude - French (Canada)", lang: "fr-CA", localService: true };
+const BRAZIL_PT = { name: "Microsoft Daniel - Portuguese (Brazil)", lang: "pt-BR", localService: true, default: true };
+
+test("a neural or Google voice wins over the legacy one", function () {
+  const a = loadApp({ voices: [LEGACY_FR, NEURAL_FR] });
+  assert.strictEqual(a.voiceFor("fr-FR").name, NEURAL_FR.name);
+
+  const b = loadApp({ voices: [LEGACY_FR, GOOGLE_FR] });
+  assert.strictEqual(b.voiceFor("fr-FR").name, GOOGLE_FR.name);
+});
+
+test("the name alone is enough to prefer a better voice", function () {
+  /* Same language, same region, both local: only the name tells them apart. */
+  const natural = { name: "Microsoft Denise (Natural) - French (France)", lang: "fr-FR", localService: true };
+  const google = { name: "Google français", lang: "fr-FR", localService: true };
+  assert.strictEqual(loadApp({ voices: [LEGACY_FR, natural] }).voiceFor("fr-FR").name, natural.name);
+  assert.strictEqual(loadApp({ voices: [LEGACY_FR, google] }).voiceFor("fr-FR").name, google.name);
+  assert.strictEqual(loadApp({ voices: [natural, LEGACY_FR] }).voiceFor("fr-FR").name, natural.name,
+    "and the order they are installed in makes no difference");
+});
+
+test("the asked-for region wins over another one", function () {
+  const a = loadApp({ voices: [CANADA_FR, LEGACY_FR] });
+  assert.strictEqual(a.voiceFor("fr-FR").name, LEGACY_FR.name, "fr-FR over fr-CA");
+  const b = loadApp({ voices: [CANADA_FR] });
+  assert.strictEqual(b.voiceFor("fr-FR").name, CANADA_FR.name, "another region still beats silence");
+});
+
+test("a voice is never borrowed from another language", function () {
+  const a = loadApp({ voices: [BRAZIL_PT] });
+  assert.strictEqual(a.voiceFor("fr-FR"), null);
+  assert.strictEqual(a.hasVoiceFor("fr-FR"), false);
+  assert.strictEqual(a.voiceFor("pt-BR").name, BRAZIL_PT.name, "its own language still works");
+});
+
+test("French is left silent rather than read by a Portuguese voice", function () {
+  const a = loadApp({ voices: [BRAZIL_PT] });
+  a.speak("bonjour", "fr-FR");
+  assert.strictEqual(a.spoken.length, 0, "nothing should be spoken without a French voice");
+  a.speak("bom dia", "pt-BR");
+  assert.strictEqual(a.spoken.length, 1, "and Portuguese still speaks");
+});
+
+test("speech runs at the natural rate, on the chosen voice", function () {
+  const a = loadApp({ voices: [LEGACY_FR, NEURAL_FR] });
+  a.speak("bonjour", "fr-FR");
+  assert.strictEqual(a.spoken.length, 1);
+  const u = a.spoken[0];
+  assert.strictEqual(u.text, "bonjour");
+  assert.strictEqual(u.rate, 1, "0.88 was the drawl");
+  assert.strictEqual(u.voice.name, NEURAL_FR.name);
+  assert.strictEqual(u.lang, "fr-FR");
+});
+
+test("a lesson speaks the answer with the course's own voice", function () {
+  const a = loadApp({ voices: [BRAZIL_PT, NEURAL_FR] });
+  a.setActive("fr");
+  a.prog().srs = {}; a.prog().crowns = {}; a.prog().xp = 0;
+  const lesson = a.course().lessons[0];
+  a.startLesson(lesson);
+  while (a.session().queue[a.session().idx].kind === "match") {
+    answerCurrent(a, true);
+    a.advance();
+  }
+  a.spoken.length = 0;
+  answerCurrent(a, true);
+  assert.ok(a.spoken.length > 0, "a right answer should be read back");
+  a.spoken.forEach(function (u) {
+    assert.strictEqual(u.voice.name, NEURAL_FR.name, "never the Portuguese voice");
+  });
 });
 
 /* ---------- a session from end to end ---------- */
