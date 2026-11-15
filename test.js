@@ -27,7 +27,7 @@ function eq(actual, expected, msg) {
 
 /* LINGUAE_PAGE points the suite at another copy of the page, which is how you
    check that it still bites: break something in a copy and run it against that. */
-const PAGE = process.env.LINGUAE_PAGE || path.join(__dirname, "linguae.html");
+const PAGE = process.env.LINGUAE_PAGE || path.join(__dirname, "index.html");
 const DAY = 86400000;
 
 /* Written out rather than read from the app: a test that borrows the table it
@@ -99,7 +99,7 @@ function readScript() {
   const html = fs.readFileSync(PAGE, "utf8");
   const open = html.indexOf("<script>");
   const close = html.lastIndexOf("</script>");
-  assert.ok(open > -1 && close > open, "linguae.html has no script block");
+  assert.ok(open > -1 && close > open, "index.html has no script block");
   return html.slice(open + "<script>".length, close);
 }
 
@@ -164,7 +164,7 @@ function loadApp(options) {
     "globalThis.__reseed = function(n){ __s = n >>> 0 || 1; };",
     context
   );
-  vm.runInContext(SOURCE, context, { filename: "linguae.html" });
+  vm.runInContext(SOURCE, context, { filename: "index.html" });
 
   const api = sandbox.__linguae;
   api.reseed = sandbox.__reseed;

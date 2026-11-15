@@ -6,7 +6,7 @@ taught **from English** — Spanish, French, German, Italian and Latin.
 
 The interface is in English. The mascot is **Leon**, a chameleon.
 
-**App:** https://claude.ai/artifact/Fzbcf54MKVHHP2DgNhnv9K
+**Live:** https://annahrodrigues.github.io/linguae/ · **Artifact:** https://claude.ai/artifact/Fzbcf54MKVHHP2DgNhnv9K
 
 ## Running it
 
@@ -17,10 +17,12 @@ is one HTML file with the `assets/` folder beside it:
 python -m http.server 8000
 ```
 
-Then open `http://localhost:8000/linguae.html`.
+Then open `http://localhost:8000/`.
 
-Opening the file straight from `file://` works too, but the browser blocks some
-of the fonts and icons, so serving it over HTTP is better.
+Opening `index.html` straight from `file://` works too, but the browser blocks
+some of the fonts and icons, so serving it over HTTP is better. The published
+site is the same files, served by GitHub Pages from `main`; `.nojekyll` keeps
+Pages from building anything and has it copy them across as they are.
 
 ## What is in it
 
@@ -76,7 +78,7 @@ letters. Latin has no country, so it carries a Roman laurel on vermilion.
 ## Layout
 
 ```
-linguae.html                    the whole app
+index.html                      the whole app
 assets/                         what the page loads
 Linguae_Brand_Kit_1.0.pdf       the brand manual
 Linguae_Kit_Identidade_Visual/  mascot and logo at full size
@@ -84,7 +86,7 @@ Linguae_React_UI_Kit_2.2/       the React design system the tokens come from
 Linguae_UI_Kit_1.0/             the original HTML/CSS/JS prototype
 ```
 
-Inside `linguae.html` the order is: course content, index, state, helpers, brand
+Inside `index.html` the order is: course content, index, state, helpers, brand
 assets, achievements, speech, exercise builder, session, views and render.
 
 ## Licence
