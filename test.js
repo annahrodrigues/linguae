@@ -548,7 +548,7 @@ test("checking an answer plays the sound and says nothing", function () {
   eq(a.clipsPlayed(), []);
 });
 
-test("picking an answer says nothing, whichever language it is in", function () {
+test("picking an option plays it, but only where the options are the language", function () {
   const a = loadApp({ voices: [NEURAL_FR] });
   a.setActive("fr");
   const c = a.course();
@@ -564,14 +564,29 @@ test("picking an answer says nothing, whichever language it is in", function () 
       while (s.idx < s.queue.length) {
         const ex = s.queue[s.idx];
         if (ex.kind === kind) {
+          const html = a.answerBox.app.innerHTML;
+          const speakers = (html.match(/data-item=/g) || []).length;
+          if (kind === "pick_tgt") {
+            assert.strictEqual(speakers, 0,
+              "the option is the button that plays it; nothing beside it");
+          } else {
+            assert.strictEqual(speakers, 1, kind + ": the question keeps its own speaker");
+          }
+
+          /* A wrong option, so reading the prompt out instead of the option
+             tapped would be caught rather than look the same. */
+          const other = ex.options.filter(function (o) { return o.id !== ex.answer; })[0];
           a.spoken.length = 0;
           a.played.length = 0;
-          ex.options.forEach(function (o) {
-            a.choose(o.id);
-            assert.strictEqual(s.sel, o.id, kind + ": the tap must still select");
-          });
-          assert.strictEqual(a.spoken.length, 0, kind + ": a tap spoke");
-          eq(a.played, [], kind + ": a tap played a recording");
+          a.choose(other.id);
+          assert.strictEqual(s.sel, other.id, kind + ": the tap must still select");
+          if (kind === "pick_tgt") {
+            eq(a.clipsPlayed(), ["assets/audio/fr/" + other.id + ".mp3"],
+              "what plays is the option that was tapped");
+          } else {
+            assert.strictEqual(a.spoken.length, 0, kind + ": an English option spoke");
+            eq(a.played, [], kind + ": an English option played a recording");
+          }
           seen[kind] = true;
           return;
         }

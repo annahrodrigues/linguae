@@ -330,8 +330,6 @@ main{flex:1;width:100%;max-width:1200px;margin:0 auto;padding-block:28px 64px;
   border-color:transparent}
 .speak--hero .ms{font-size:40px}
 .answers{display:grid;gap:12px}
-.answer-row{display:flex;align-items:center;gap:10px}
-.answer-row .answer{flex:1;min-width:0}
 .answer{display:flex;align-items:center;gap:12px;text-align:left;width:100%;background:var(--color-surface);
   border:1px solid var(--color-border);border-radius:var(--radius-button);padding:16px;
   font-weight:600;font-size:16px;cursor:pointer;transition:border-color var(--t),background var(--t)}
@@ -1729,7 +1727,7 @@ function pageLearn(){
   return '<div class="page"><div class="learn-layout">'
     + '<div class="learn-main">' + main
     + '<p class="small-note">' + (courseHasAudio(c)
-        ? "Tap the speaker beside any " + esc(c.name) + " word to hear it read aloud."
+        ? "Tap a " + esc(c.name) + " word to hear it read aloud, or the speaker where a question asks about one word."
         : "No " + esc(c.name) + " speech voice is installed, so the audio is off rather than read in "
           + "the wrong accent. On Windows: Settings &rsaquo; Time &amp; language &rsaquo; Language &amp; region "
           + "&rsaquo; add " + esc(c.name) + " with its speech pack, then reload.") + '</p>'
@@ -1985,7 +1983,7 @@ function bodyFor(ex, locked){
   if (ex.kind === "pick_tgt") {
     return qhead("Choose the right answer", "How do you say this in " + esc(c.name) + "?")
       + '<div class="prompt">' + mascotImg("curious", 76) + '<div class="bubble">' + esc(ex.item.en) + '</div></div>'
-      + optList(ex, locked, function(it){ return esc(it.tgt) + romOf(it); }, true);
+      + optList(ex, locked, function(it){ return esc(it.tgt) + romOf(it); });
   }
   if (ex.kind === "pick_en") {
     return qhead("Choose the right answer", "What does this mean?")
@@ -2023,23 +2021,27 @@ function bodyFor(ex, locked){
     + '<p class="hint">' + note + '</p>';
 }
 
-/* `spoken` is set when the options themselves are in the target language. The
-   speaker cannot live inside the option, since a button may not nest, so the
-   pair sits in a row together. */
-function optList(ex, locked, label, spoken){
+function optList(ex, locked, label){
   return '<div class="answers">' + ex.options.map(function(it, i){
-    const btn = '<button class="answer' + optCls(it.id, ex, locked) + '" data-pick="' + it.id + '"'
-      + (locked ? " disabled" : "") + '><kbd>' + "ABCD".charAt(i) + '</kbd><span>' + label(it) + '</span></button>';
-    if (!spoken) return btn;
-    const spk = spkBtn(it, "speak--sm");
-    return spk ? '<div class="answer-row">' + btn + spk + '</div>' : btn;
+    return '<button class="answer' + optCls(it.id, ex, locked) + '" data-pick="' + it.id + '"'
+      + (locked ? " disabled" : "") + '><kbd>' + "ABCD".charAt(i) + '</kbd><span>'
+      + label(it) + '</span></button>';
   }).join("") + '</div>';
 }
-/* Picking an answer is silent. Every word in the language being learnt carries
-   its own speaker button, so a tap that reads something out on its own is a
-   surprise — and on an English option what it read out was the prompt the
-   person had asked for a moment earlier. */
-function choose(id){ sess.sel = id; render(); }
+/* Where the options are the words being learnt, the option is the button that
+   plays it, the same as a pair in a match — no speaker of its own beside it.
+   Where the options are in English there is nothing to hear on that side: the
+   question keeps its own speaker, and a tap that played the prompt again would
+   just be the word twice. */
+function choose(id){
+  const ex = currentEx();
+  if (ex.kind === "pick_tgt") {
+    const opt = ex.options.filter(function(o){ return o.id === id; })[0];
+    if (opt) sayItem(opt, course().tts);
+  }
+  sess.sel = id;
+  render();
+}
 
 function optCls(id, ex, locked){
   if (!locked) return sess.sel === id ? " selected" : "";
