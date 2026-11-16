@@ -1065,38 +1065,35 @@ function openMatch(a) {
   return ex;
 }
 
-test("joining a pair says nothing, whichever half is tapped first", function () {
+test("in a match the word itself plays, and only the half being learnt", function () {
   const a = loadApp({ voices: [NEURAL_FR] });
   const ex = openMatch(a);
   a.addClips(a.course().items.map(function (it) { return it.id; }));
   const first = ex.pairs[0].id, second = ex.pairs[1].id;
-
-  a.spoken.length = 0;
   a.played.length = 0;
+
   a.tapPair(fakePair("tgt", first), ex);
+  eq(a.clipsPlayed(), ["assets/audio/fr/" + first + ".mp3"], "a tap reads the word out");
   a.tapPair(fakePair("en", first), ex);
   eq(a.session().matched, [first], "the pair landed");
+  assert.strictEqual(a.clipsPlayed().length, 1, "closing the link adds nothing");
 
-  /* And the other way round, where the French half is the tap that closes the
-     link: that one used to read the word out, which is the repeat. */
+  /* The other way round: the French half is now the tap that closes the link,
+     and it still reads itself out — a tap on the word is what plays it. The
+     English half is silent either way, where it used to repeat the French. */
   a.tapPair(fakePair("en", second), ex);
+  assert.strictEqual(a.clipsPlayed().length, 1, "the English half is silent");
   a.tapPair(fakePair("tgt", second), ex);
-  eq(a.session().matched, [first, second]);
-
-  assert.strictEqual(a.spoken.length, 0, "a tap on a pair spoke");
-  eq(a.clipsPlayed(), [], "a tap on a pair played a recording");
+  eq(a.clipsPlayed(), ["assets/audio/fr/" + first + ".mp3", "assets/audio/fr/" + second + ".mp3"]);
 });
 
-test("every word to be learnt in a match carries its own speaker", function () {
+test("a match carries no speaker buttons of its own", function () {
   const a = loadApp({ voices: [NEURAL_FR] });
-  const ex = openMatch(a);
+  openMatch(a);
   const html = a.answerBox.app.innerHTML;
-  ex.pairs.forEach(function (p) {
-    assert.ok(html.indexOf('data-item="' + p.id + '"') > -1,
-      p.tgt + " has nothing to play it with");
-  });
-  /* The English half has no speaker: there is nothing to hear on that side. */
-  assert.strictEqual((html.match(/data-item=/g) || []).length, ex.pairs.length);
+  assert.strictEqual(html.indexOf("data-item="), -1,
+    "the word is the button here; a speaker belongs to the exercises about one word");
+  assert.ok(html.indexOf('data-side="tgt"') > -1, "the pairs are still there");
 });
 
 test("spaced review pays less and leaves crowns alone", function () {
