@@ -1538,6 +1538,13 @@ function pageProgress(){
   return '<div class="page">'
     + '<div class="page-head"><div><div class="eyebrow">' + esc(c.name) + '</div><h1>Your progress</h1>'
     + '<p>What you have met, and what is coming back.</p></div></div>'
+    + '<section class="hero"><div class="hero__txt"><span class="eyebrow">Spaced review</span>'
+    + '<h2>' + (due ? due + (due > 1 ? " words are" : " word is") + " ready to come back"
+                   : "Nothing is due right now") + '</h2>'
+    + '<p>' + met.length + ' of ' + c.items.length + ' met in ' + esc(c.name) + '.</p>'
+    + (due ? '<button class="btn btn--dark" id="practice">Review now '
+             + ic("arrow_forward", "ms--sm") + '</button>' : "")
+    + '</div><img src="assets/hero-progress.png" alt="Leon, the Linguae chameleon"></section>'
     + tabs + body + '</div>';
 }
 

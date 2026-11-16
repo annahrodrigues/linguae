@@ -123,6 +123,9 @@ both kept in this repository for reference:
 - Leon's expressions come from the visual identity kit, shrunk down for the web
 - Each unit can carry its own illustration at `assets/unit-<unit id>.png`, listed
   in `UNIT_ART`; a unit without one just shows no picture
+- `python tools/mascot.py <drawing> <destination>` cuts a drawing out of its
+  background, crops and scales it; drawings that already have their own
+  transparency are kept as they are
 - Brand green `#248F70` is the reference; in the interface text uses `#1D7A5F`,
   the same green darkened just enough to clear AA
 
@@ -137,6 +140,7 @@ index.html                      the whole app
 test.js                         the engine's tests
 tools/audio.js                  list what to record, index what is recorded
 tools/kokoro.py                 record it with Kokoro-82M, on this machine
+tools/mascot.py                 cut a drawing out of its background and size it
 assets/                         what the page loads
 assets/audio/                   recorded clips, if any, plus their index.json
 Linguae_Brand_Kit_1.0.pdf       the brand manual
