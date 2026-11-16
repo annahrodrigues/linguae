@@ -1155,6 +1155,50 @@ function blip(ctx, at, opts){
   osc.stop(at + opts.dur + 0.02);
 }
 
+/* The recordings in assets/sfx, built from sounds/ by tools/sfx.py. They are
+   Ogg/Opus: unlike MP3 it carries a pre-skip the decoder honours, so a sound
+   that answers a click starts on the click. Where a browser cannot play them,
+   the oscillators below take over for the two that have an equivalent. */
+const sfxEls = {};
+function sfxEl(name){
+  if (name in sfxEls) return sfxEls[name];
+  let el = null;
+  try {
+    el = new Audio("assets/sfx/" + name + ".opus");
+    el.preload = "auto";
+  } catch (e) { el = null; }
+  sfxEls[name] = el;
+  return el;
+}
+
+/* Fetching starts when the element is made, so a lesson warms them up rather
+   than meeting the first one cold. */
+function warmSfx(){
+  ["correct_answer", "incorrect_answer", "finished_correct", "finished_incorrect"]
+    .forEach(sfxEl);
+}
+
+function playSfx(name, instead){
+  const el = sfxEl(name);
+  if (!el) { if (instead) instead(); return; }
+  let fallen = false;
+  const fail = function(){
+    if (fallen) return;
+    fallen = true;
+    if (instead) instead();
+  };
+  try {
+    el.onerror = fail;
+    el.currentTime = 0;
+    const playing = el.play();
+    if (playing && playing.catch) playing.catch(fail);
+  } catch (e) { fail(); }
+}
+
+/* Right and wrong, as recordings, falling back to the oscillators. */
+function sayRight(){ playSfx("correct_answer", function(){ chime(true); }); }
+function sayWrong(){ playSfx("incorrect_answer", function(){ chime(false); }); }
+
 function chime(ok){
   const ctx = sfxCtx();
   if (!ctx) return;
@@ -1312,6 +1356,7 @@ function startLesson(lesson){
     sel: null, used: [], picked: null, matched: [], state: "ask", lastOk: null
   };
   document.documentElement.classList.add("lesson-mode");
+  warmSfx();
   render();
 }
 function startPractice(){
@@ -1324,6 +1369,7 @@ function startPractice(){
     sel: null, used: [], picked: null, matched: [], state: "ask", lastOk: null
   };
   document.documentElement.classList.add("lesson-mode");
+  warmSfx();
   render();
 }
 function quitLesson(){
@@ -1368,9 +1414,17 @@ function submit(){
   }
   sess.lastOk = ok;
   sess.state = "feedback";
-  chime(ok);
+  if (ok) sayRight(); else sayWrong();
   save();
-  if (ok && ex.item && ex.kind !== "pick_en") sayItem(ex.item, course().tts);
+  if (ok && ex.item && ex.kind !== "pick_en") {
+    /* Let the sound land first: starting the word on the same tick buried its
+       first syllable. A third of a second reads as one gesture, not a wait.
+       The guard is for an answer that is already gone by then. */
+    const word = ex.item, lang = course().tts, mark = sess.answered;
+    setTimeout(function(){
+      if (sess && sess.answered === mark) sayItem(word, lang);
+    }, 330);
+  }
   render();
   if (sess.hearts <= 0) { sess.state = "dead"; render(); }
 }
@@ -1386,6 +1440,7 @@ function advance(){
 
 function finish(){
   const perfect = sess.mistakes === 0;
+  playSfx(perfect ? "finished_correct" : "finished_incorrect");
   const gained = sess.mode === "practice" ? 8 : (10 + (perfect ? 5 : 0));
   addXp(gained);
   touchStreak();
@@ -2006,12 +2061,12 @@ function tapPair(btn, ex){
     if (sess.matched.length === ex.pairs.length) {
       sess.correct++; sess.answered++;
       sess.state = "feedback"; sess.lastOk = true;
-      chime(true);
+      sayRight();
     }
     render();
   } else {
     const other = app.querySelector('[data-side="' + pSide + '"][data-id="' + pId + '"]');
-    chime(false);
+    sayWrong();
     btn.classList.add("bad");
     if (other) other.classList.add("bad");
     gradeItem(id, false);

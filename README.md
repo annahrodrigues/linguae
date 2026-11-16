@@ -34,7 +34,7 @@ Pages from building anything and has it copy them across as they are.
 | **Spaced repetition** | Leitner boxes at 1, 3, 7, 16 and 35 days; get one wrong and the word drops to box 2 and comes back in the same session |
 | **Progress** | 5 crowns per lesson, XP, a daily goal of 30 XP, a day streak and 9 achievements |
 | **Hearts** | 5 per lesson; run out and the lesson restarts |
-| **Chimes** | a rising pair on a right answer, a low fall on a wrong one, built from oscillators when they play rather than loaded as files |
+| **Sounds** | a recording on each answer and at the end of a lesson, one ending for a clean run and another for a run with a miss; where a browser will not play them, a pair of oscillators answers instead |
 | **Audio** | a recorded clip when the repository has one, otherwise the browser's `speechSynthesis` at the natural rate, on the best voice the system offers — a neural or Google voice over a legacy one; with neither, that word goes quiet rather than be read in another language's accent |
 | **Accessibility** | every pair of text colours clears AA contrast (4.5:1) in both themes |
 
@@ -144,6 +144,9 @@ test.js                         the engine's tests
 tools/audio.js                  list what to record, index what is recorded
 tools/kokoro.py                 record it with Kokoro-82M, on this machine
 tools/mascot.py                 cut a drawing out of its background and size it
+tools/sfx.py                    trim, mix and encode the interface sounds
+sounds/                         the recordings tools/sfx.py builds from
+assets/sfx/                     the built sounds the page plays
 assets/                         what the page loads
 assets/audio/                   recorded clips, if any, plus their index.json
 Linguae_Brand_Kit_1.0.pdf       the brand manual

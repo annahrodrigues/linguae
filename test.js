@@ -131,10 +131,14 @@ const SOURCE = readScript() + EXPORTS;
 function loadApp(options) {
   const opts = options || {};
   const dom = makeDom();
+  /* The app defers a few things — the word read after a right answer, the
+     redraw after a mismatched pair. A no-op setTimeout would quietly drop
+     them, so they queue here and a test runs them when it is ready. */
+  const timers = [];
   const sandbox = {
     console: console,
-    setTimeout() { return 0; },
-    clearTimeout() {},
+    setTimeout(fn, ms) { timers.push({ fn: fn, ms: ms }); return timers.length; },
+    clearTimeout(id) { if (timers[id - 1]) timers[id - 1].fn = null; },
     document: dom.document,
     localStorage: makeStorage(),
     navigator: { language: "en-GB" }
@@ -166,9 +170,12 @@ function loadApp(options) {
       }
     };
   };
-  sandbox.Audio = function () {
+  /* opts.noAudioElement stands in for a browser with no Audio at all, where
+     even making the element throws. */
+  if (!opts.noAudioElement) sandbox.Audio = function (src) {
     return {
-      src: "",
+      src: src || "",
+      preload: "",
       currentTime: 0,
       onerror: null,
       pause() {},
@@ -213,6 +220,16 @@ function loadApp(options) {
   api.spoken = spoken;
   api.played = played;
   api.chimes = chimes;
+  /* Run every callback waiting on a timer, in the order they were set. */
+  api.runTimers = function () {
+    timers.splice(0).forEach(function (t) { if (t.fn) t.fn(); });
+  };
+  api.sfxPlayed = function () {
+    return played.filter(function (u) { return u.indexOf("assets/sfx/") === 0; });
+  };
+  api.clipsPlayed = function () {
+    return played.filter(function (u) { return u.indexOf("assets/audio/") === 0; });
+  };
   /* Stands in for the manifest, which arrives over fetch in a browser. */
   api.addClips = function (ids, format) {
     if (format) api.AUDIO.format = format;
@@ -519,7 +536,9 @@ test("a lesson speaks the answer with the course's own voice", function () {
   }
   a.spoken.length = 0;
   answerCurrent(a, true);
-  assert.ok(a.spoken.length > 0, "a right answer should be read back");
+  assert.strictEqual(a.spoken.length, 0, "the word waits for the sound to land");
+  a.runTimers();
+  assert.ok(a.spoken.length > 0, "and is read once the wait is over");
   a.spoken.forEach(function (u) {
     assert.strictEqual(u.voice.name, NEURAL_FR.name, "never the Portuguese voice");
   });
@@ -725,8 +744,26 @@ test("a lesson only asks you to listen to what can be heard", function () {
 
 /* ---------- the chimes ---------- */
 
-test("checking an answer sounds, and the two outcomes do not sound alike", function () {
+test("checking an answer plays the recording for the outcome", function () {
   const a = loadApp({ voices: [NEURAL_FR] });
+  freshSrs(a, "fr");
+  const item = a.course().items[0];
+
+  typingSession(a, item);
+  a.typeAnswer(item.tgt);
+  a.played.length = 0;
+  a.submit();
+  eq(a.sfxPlayed(), ["assets/sfx/correct_answer.opus"]);
+
+  typingSession(a, item);
+  a.typeAnswer("qqqqqqqq");
+  a.played.length = 0;
+  a.submit();
+  eq(a.sfxPlayed(), ["assets/sfx/incorrect_answer.opus"]);
+});
+
+test("the oscillators take over when the recording will not play", function () {
+  const a = loadApp({ voices: [NEURAL_FR], clipFails: true });
   freshSrs(a, "fr");
   const item = a.course().items[0];
 
@@ -735,24 +772,56 @@ test("checking an answer sounds, and the two outcomes do not sound alike", funct
   a.chimes.length = 0;
   a.submit();
   const right = a.chimes.slice();
-  assert.ok(right.length >= 2, "a right answer should ring");
+  assert.ok(right.length >= 2, "a right answer should still ring");
 
   typingSession(a, item);
   a.typeAnswer("qqqqqqqq");
   a.chimes.length = 0;
   a.submit();
   const wrong = a.chimes.slice();
-  assert.ok(wrong.length >= 1, "a wrong answer should sound too");
+  assert.ok(wrong.length >= 1, "and a wrong one should still sound");
 
-  eq([right.join(","), wrong.join(",")].length, 2);
   assert.notDeepStrictEqual(right, wrong, "the two must not be the same sound");
   assert.ok(Math.min.apply(null, right) > Math.max.apply(null, wrong),
     "right rings above wrong: " + right.join(",") + " vs " + wrong.join(","));
   assert.ok(right[1] > right[0], "and it rises");
 });
 
-test("a lesson still runs where the browser has no Web Audio", function () {
-  const a = loadApp({ noWebAudio: true });
+test("with no Audio element at all, the oscillators still answer", function () {
+  const a = loadApp({ voices: [NEURAL_FR], noAudioElement: true });
+  freshSrs(a, "fr");
+  const item = a.course().items[0];
+
+  typingSession(a, item);
+  a.typeAnswer(item.tgt);
+  a.chimes.length = 0;
+  a.submit();
+  assert.ok(a.chimes.length >= 2, "making the element threw, so the chime must cover it");
+  assert.strictEqual(a.played.length, 0, "and nothing was handed to an element");
+});
+
+test("finishing a lesson sounds, and says whether it was clean", function () {
+  const a = loadApp({ voices: [NEURAL_FR] });
+
+  freshSrs(a, "fr");
+  a.played.length = 0;
+  const clean = playLesson(a);
+  assert.strictEqual(clean.session.mistakes, 0);
+  assert.ok(a.sfxPlayed().indexOf("assets/sfx/finished_correct.opus") > -1,
+    "a clean lesson should end on the clean sound");
+  assert.strictEqual(a.sfxPlayed().indexOf("assets/sfx/finished_incorrect.opus"), -1);
+
+  freshSrs(a, "fr");
+  a.played.length = 0;
+  const messy = playLesson(a, { wrongAt: 1 });
+  assert.ok(messy.session.mistakes > 0);
+  assert.ok(a.sfxPlayed().indexOf("assets/sfx/finished_incorrect.opus") > -1,
+    "a lesson with a miss should end on the other one");
+  assert.strictEqual(a.sfxPlayed().indexOf("assets/sfx/finished_correct.opus"), -1);
+});
+
+test("a lesson still runs where the browser has neither sound", function () {
+  const a = loadApp({ noWebAudio: true, clipFails: true });
   freshSrs(a, "fr");
   const run = playLesson(a);
   assert.strictEqual(run.session.state, "done");
