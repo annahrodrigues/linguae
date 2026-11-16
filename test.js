@@ -120,6 +120,7 @@ const EXPORTS = `
   hasVoiceFor: hasVoiceFor, voiceFor: voiceFor, speak: speak, choose: choose,
   AUDIO: AUDIO, clipFor: clipFor, sayItem: sayItem, canHear: canHear, FLAGS: FLAGS,
   courseHasAudio: courseHasAudio,
+  pageAchievements: pageAchievements, achEarned: achEarned,
   state: function(){ return S; },
   session: function(){ return sess; },
   setActive: function(lg){ S.active = lg; }
@@ -1310,6 +1311,21 @@ test("the practice page counts each set and offers only what it can run", functi
     && html.indexOf('data-practice="mistakes" disabled') === -1, "the mistakes set is ready");
   assert.ok(html.indexOf('data-practice="listen"') > -1
     && html.indexOf('data-practice="listen" disabled') === -1, "and so is the drill");
+});
+
+test("Leon lifts the trophy once there is one to lift", function () {
+  const a = loadApp();
+  freshSrs(a, "fr");
+  const quiet = a.pageAchievements();
+  assert.strictEqual(a.achEarned().length, 0, "nothing unlocked on a fresh course");
+  assert.strictEqual(quiet.indexOf("leon-trophy.webp"), -1,
+    "no trophy before one has been won");
+
+  playLesson(a);
+  assert.ok(a.achEarned().length > 0, "a first lesson unlocks something");
+  const won = a.pageAchievements();
+  assert.ok(won.indexOf('src="assets/leon-trophy.webp"') > -1, "the animation should be there");
+  assert.ok(won.indexOf("alt=\"Leon") > -1, "and it should say who it is");
 });
 
 test("progress is kept per course", function () {

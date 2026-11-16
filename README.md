@@ -122,14 +122,19 @@ both kept in this repository for reference:
 
 - Colours, type (Outfit and DM Sans) and components come from the kit's `src/styles.css`
 - The symbol is the vector *Hidden Chameleon L* monogram (`linguae-monogram.svg`)
-- Leon's expressions come from the visual identity kit, shrunk down for the web;
-  the one animation, `assets/leon-study.webp`, plays in the sidebar while a course
-  is under way and gives way to a sleeping Leon in one that has not begun
+- Leon's expressions come from the visual identity kit, shrunk down for the web
+- Two animations: `assets/leon-study.webp` plays in the sidebar while a course is
+  under way and gives way to a sleeping Leon in one that has not begun, and
+  `assets/leon-trophy.webp` lifts a trophy on the achievements page once there is
+  one to lift
 - Each unit can carry its own illustration at `assets/unit-<unit id>.png`, listed
   in `UNIT_ART`; a unit without one just shows no picture
 - `python tools/mascot.py <drawing> <destination>` cuts a drawing out of its
   background, crops and scales it; drawings that already have their own
   transparency are kept as they are
+- `python tools/anim.py <gif> <destination>` turns a hand-made GIF into an
+  animated WebP: a GIF's transparency is one bit, so its edges arrive as a
+  staircase, and shrinking the frames with the colour premultiplied softens them
 - Brand green `#248F70` is the reference; in the interface text uses `#1D7A5F`,
   the same green darkened just enough to clear AA
 
@@ -145,6 +150,7 @@ test.js                         the engine's tests
 tools/audio.js                  list what to record, index what is recorded
 tools/kokoro.py                 record it with Kokoro-82M, on this machine
 tools/mascot.py                 cut a drawing out of its background and size it
+tools/anim.py                   turn a GIF into an animated WebP with soft edges
 tools/sfx.py                    trim, mix and encode the interface sounds
 sounds/                         the recordings tools/sfx.py builds from
 assets/sfx/                     the built sounds the page plays

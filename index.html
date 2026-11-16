@@ -1761,7 +1761,13 @@ function pageAchievements(){
     + '<h2>' + (earned ? "You are doing well!" : "Your first one is close.") + '</h2>'
     + '<p>' + earned + ' of ' + ACHIEVEMENTS.length + ' unlocked in ' + esc(course().name) + '.</p>'
     + '<button class="btn btn--dark" id="continue">Practise now ' + ic("arrow_forward", "ms--sm") + '</button></div>'
-    + mascotImg(earned ? "celebrating" : "curious") + '</section>'
+    /* Leon lifts the trophy once there is one to lift. With nothing unlocked
+       yet he only looks on, the same way he sleeps through a course that has
+       not been started. */
+    + (earned
+        ? '<img src="assets/leon-trophy.webp" alt="Leon, the Linguae chameleon, holding up a trophy">'
+        : mascotImg("curious"))
+    + '</section>'
     + '<section class="badges">' + badges + '</section>'
     + '</div>';
 }
