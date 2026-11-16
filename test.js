@@ -120,7 +120,7 @@ const EXPORTS = `
   hasVoiceFor: hasVoiceFor, voiceFor: voiceFor, speak: speak, choose: choose,
   AUDIO: AUDIO, clipFor: clipFor, sayItem: sayItem, canHear: canHear, FLAGS: FLAGS,
   courseHasAudio: courseHasAudio,
-  pageAchievements: pageAchievements, achEarned: achEarned,
+  pageAchievements: pageAchievements, pageProgress: pageProgress, achEarned: achEarned,
   state: function(){ return S; },
   session: function(){ return sess; },
   setActive: function(lg){ S.active = lg; }
@@ -1384,6 +1384,14 @@ test("a Review button that hands over its click still runs today's review", func
   /* The older buttons pass the event straight through as the first argument. */
   a.startPractice({ type: "click" });
   assert.strictEqual(a.session().set, "due", "an event is not a set name");
+});
+
+test("the progress page is headed by Leon climbing", function () {
+  const a = loadApp();
+  freshSrs(a, "fr");
+  const html = a.pageProgress();
+  assert.ok(html.indexOf('src="assets/leon-progress.webp"') > -1, "the animation should be there");
+  assert.ok(html.indexOf('alt="Leon') > -1, "and it should say who it is");
 });
 
 test("the practice page is headed by Leon at his desk", function () {
