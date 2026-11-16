@@ -115,7 +115,7 @@ const EXPORTS = `
   buildLesson: buildLesson, buildPractice: buildPractice,
   startLesson: startLesson, startPractice: startPractice,
   submit: submit, advance: advance, tapPair: tapPair,
-  hasVoiceFor: hasVoiceFor, voiceFor: voiceFor, speak: speak, pickAudio: pickAudio,
+  hasVoiceFor: hasVoiceFor, voiceFor: voiceFor, speak: speak, choose: choose,
   AUDIO: AUDIO, clipFor: clipFor, sayItem: sayItem, canHear: canHear, FLAGS: FLAGS,
   courseHasAudio: courseHasAudio,
   state: function(){ return S; },
@@ -524,9 +524,10 @@ test("speech runs at the natural rate, on the chosen voice", function () {
   assert.strictEqual(u.lang, "fr-FR");
 });
 
-test("a lesson speaks the answer with the course's own voice", function () {
+test("checking an answer plays the sound and says nothing", function () {
   const a = loadApp({ voices: [BRAZIL_PT, NEURAL_FR] });
   a.setActive("fr");
+  a.addClips(a.course().items.map(function (it) { return it.id; }));
   a.prog().srs = {}; a.prog().crowns = {}; a.prog().xp = 0;
   const lesson = a.course().lessons[0];
   a.startLesson(lesson);
@@ -535,41 +536,50 @@ test("a lesson speaks the answer with the course's own voice", function () {
     a.advance();
   }
   a.spoken.length = 0;
+  a.played.length = 0;
   answerCurrent(a, true);
-  assert.strictEqual(a.spoken.length, 0, "the word waits for the sound to land");
+  assert.ok(a.sfxPlayed().length > 0, "the right-answer sound still fires");
+  assert.strictEqual(a.spoken.length, 0, "the word is not read out again");
+  eq(a.clipsPlayed(), [], "nor is its recording replayed");
+  /* And nothing is waiting on a timer to do it a moment later. */
   a.runTimers();
-  assert.ok(a.spoken.length > 0, "and is read once the wait is over");
-  a.spoken.forEach(function (u) {
-    assert.strictEqual(u.voice.name, NEURAL_FR.name, "never the Portuguese voice");
-  });
+  assert.strictEqual(a.spoken.length, 0, "not after a wait either");
+  eq(a.clipsPlayed(), []);
 });
 
-test("a tap reads the option only where the options are in the language", function () {
+test("picking an answer says nothing, whichever language it is in", function () {
   const a = loadApp({ voices: [NEURAL_FR] });
   a.setActive("fr");
   const c = a.course();
-  const item = c.items[0];
-
-  /* Options in French: the one that was tapped is what should be heard. */
-  let ex = null;
-  for (let i = 0; i < 60 && !ex; i++) {
-    const made = a.makeExercise(item, 0, c, false);
-    if (made.kind === "pick_tgt") ex = made;
-  }
-  assert.ok(ex, "no pick_tgt exercise was built");
-  ex.options.forEach(function (o) {
-    assert.strictEqual(a.pickAudio(ex, o.id).id, o.id);
+  a.addClips(c.items.map(function (it) { return it.id; }));
+  const seen = {};
+  ["pick_tgt", "pick_en", "listen"].forEach(function (kind) {
+    /* Reach the kind by playing until it turns up: `choose` works on the
+       session, which is how a tap reaches it in the page. */
+    for (let guard = 0; guard < 400; guard++) {
+      freshSrs(a, "fr");
+      a.startLesson(c.lessons[guard % c.lessons.length]);
+      const s = a.session();
+      while (s.idx < s.queue.length) {
+        const ex = s.queue[s.idx];
+        if (ex.kind === kind) {
+          a.spoken.length = 0;
+          a.played.length = 0;
+          ex.options.forEach(function (o) {
+            a.choose(o.id);
+            assert.strictEqual(s.sel, o.id, kind + ": the tap must still select");
+          });
+          assert.strictEqual(a.spoken.length, 0, kind + ": a tap spoke");
+          eq(a.played, [], kind + ": a tap played a recording");
+          seen[kind] = true;
+          return;
+        }
+        answerCurrent(a, true);
+        a.advance();
+      }
+    }
   });
-
-  /* Options in English: a tap reads nothing. Playing the prompt again only
-     repeats what was just heard, and the prompt has its own speaker. */
-  ["pick_en", "listen"].forEach(function (kind) {
-    const asking = { kind: kind, item: item, options: ex.options, answer: item.id };
-    asking.options.forEach(function (o) {
-      assert.strictEqual(a.pickAudio(asking, o.id), null,
-        kind + ": an English option should not play the prompt again");
-    });
-  });
+  eq(seen, { pick_tgt: true, pick_en: true, listen: true }, "a kind never came up");
 });
 
 /* ---------- what a course is taught from ---------- */
@@ -1044,6 +1054,23 @@ test("matching a pair grades it right, a mismatch grades both wrong", function (
   });
   assert.strictEqual(a.session().matched.length, 5);
   assert.strictEqual(a.session().state, "feedback", "the last pair closes the exercise");
+});
+
+test("a matched pair reads only its target side", function () {
+  const a = loadApp({ voices: [NEURAL_FR] });
+  freshSrs(a, "fr");
+  const lesson = a.course().lessons.filter(function (l) { return l.kind === "w"; })[0];
+  a.startLesson(lesson);
+  const ex = a.session().queue[0];
+  assert.strictEqual(ex.kind, "match");
+  const id = ex.pairs[0].id;
+
+  a.spoken.length = 0;
+  a.tapPair(fakePair("tgt", id), ex);
+  assert.strictEqual(a.spoken.length, 1, "the French half reads itself out on a tap");
+  a.tapPair(fakePair("en", id), ex);
+  eq(a.session().matched, [id], "the pair landed");
+  assert.strictEqual(a.spoken.length, 1, "and the English half adds nothing to it");
 });
 
 test("spaced review pays less and leaves crowns alone", function () {

@@ -1416,15 +1416,9 @@ function submit(){
   sess.state = "feedback";
   if (ok) sayRight(); else sayWrong();
   save();
-  if (ok && ex.item && ex.kind !== "pick_en") {
-    /* Let the sound land first: starting the word on the same tick buried its
-       first syllable. A third of a second reads as one gesture, not a wait.
-       The guard is for an answer that is already gone by then. */
-    const word = ex.item, lang = course().tts, mark = sess.answered;
-    setTimeout(function(){
-      if (sess && sess.answered === mark) sayItem(word, lang);
-    }, 330);
-  }
+  /* Checking an answer plays the sound and nothing else. It used to read the
+     word out again as well, which on a question that had just been listened to
+     was the same word twice; the speaker beside the word is there for that. */
   render();
   if (sess.hearts <= 0) { sess.state = "dead"; render(); }
 }
@@ -1919,14 +1913,11 @@ function optList(ex, locked, label, spoken){
     return spk ? '<div class="answer-row">' + btn + spk + '</div>' : btn;
   }).join("") + '</div>';
 }
-/* What a tap on an option should read out: the option itself, but only where
-   the options are in the language being learnt. Where they are in English
-   there is nothing worth hearing — reading the prompt again just repeats what
-   was already played, and the prompt keeps its own speaker for that. */
-function pickAudio(ex, id){
-  if (ex.kind !== "pick_tgt") return null;
-  return ex.options.filter(function(o){ return o.id === id; })[0] || null;
-}
+/* Picking an answer is silent. Every word in the language being learnt carries
+   its own speaker button, so a tap that reads something out on its own is a
+   surprise — and on an English option what it read out was the prompt the
+   person had asked for a moment earlier. */
+function choose(id){ sess.sel = id; render(); }
 
 function optCls(id, ex, locked){
   if (!locked) return sess.sel === id ? " selected" : "";
@@ -2002,11 +1993,7 @@ function wireLesson(){
     sayItem(ex.item, course().tts);
   }
   app.querySelectorAll("[data-pick]").forEach(function(b){
-    b.addEventListener("click", function(){
-      sess.sel = b.getAttribute("data-pick");
-      sayItem(pickAudio(ex, sess.sel), course().tts);
-      render();
-    });
+    b.addEventListener("click", function(){ choose(b.getAttribute("data-pick")); });
   });
   app.querySelectorAll("[data-tile]").forEach(function(b){
     b.addEventListener("click", function(){
@@ -2054,9 +2041,7 @@ function tapPair(btn, ex){
     sess.matched.push(id);
     sess.picked = null;
     gradeItem(id, true);
-    /* The target side already read itself out on the tap. */
-    const it = side === "en" ? course().byId[id] : null;
-    if (it) sayItem(it, course().tts);
+    /* Only the target side speaks, and it did so on its own tap. */
     save();
     if (sess.matched.length === ex.pairs.length) {
       sess.correct++; sess.answered++;

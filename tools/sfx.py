@@ -10,11 +10,10 @@ few dozen milliseconds of silence at the front of every file, which on a sound
 that answers a click is a stutter. Ogg/Opus carries a pre-skip the decoder
 honours exactly, so it starts clean, and it is a tenth of the size of WAV.
 
-Two of the four are cut short on purpose. The sound that answers a right click
-is followed immediately by the word being read aloud, and the recording's tail
-is a long quiet wash that would sit under the first syllable. The table below
-says where each one is cut; the figures came from reading the envelopes, not
-from taste.
+Two of the four are cut short on purpose: the recordings that answer a click
+end in a long quiet wash, and the next question is already on screen while it
+is still ringing. The table below says where each one is cut; the figures came
+from reading the envelopes, not from taste.
 
 Needs soundfile and NumPy:  pip install soundfile numpy
 """
@@ -35,10 +34,8 @@ OUT = os.path.join(ROOT, "assets", "sfx")
 # fade:   seconds of fade at the end, so a cut never clicks
 # mono:   the two click sounds are all but mono already; the two endings carry
 #         real stereo width and are left alone
-# peak:   the click sounds are mixed under the speech. The right-answer sound
-#         still has half its level at 0.69s and the word starts at 0.33s, so
-#         they do overlap; no delay short enough to feel immediate would avoid
-#         it. They are separated by level instead of by time.
+# peak:   the two click sounds answer every single question, so they are mixed
+#         below the two endings, which are heard once at the close of a lesson.
 SOUNDS = {
     "correct_answer":    {"keep": 1.05, "fade": 0.16, "mono": True,  "peak": 0.58},
     "incorrect_answer":  {"keep": 0.95, "fade": 0.13, "mono": True,  "peak": 0.62},
