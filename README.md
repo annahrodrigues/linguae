@@ -28,12 +28,13 @@ Pages from building anything and has it copy them across as they are.
 
 | | |
 |---|---|
-| **Courses** | 5 languages, 7 units and 14 lessons each, 112 words and phrases per course |
+| **Courses** | 7 courses, 7 units and 14 lessons each, 112 words and phrases per course. Spanish, French, German, Italian, Latin and Russian are taught from English; English is taught from Portuguese |
 | **Exercises** | 6 kinds: match the pairs, pick the translation in either direction, listen and transcribe, build from a word bank, and free typing |
 | **Marking** | accents and punctuation are normalised, and a one-letter typo counts as correct, with a note |
 | **Spaced repetition** | Leitner boxes at 1, 3, 7, 16 and 35 days; get one wrong and the word drops to box 2 and comes back in the same session |
 | **Progress** | 5 crowns per lesson, XP, a daily goal of 30 XP, a day streak and 9 achievements |
 | **Hearts** | 5 per lesson; run out and the lesson restarts |
+| **Chimes** | a rising pair on a right answer, a low fall on a wrong one, built from oscillators when they play rather than loaded as files |
 | **Audio** | a recorded clip when the repository has one, otherwise the browser's `speechSynthesis` at the natural rate, on the best voice the system offers — a neural or Google voice over a legacy one; with neither, that word goes quiet rather than be read in another language's accent |
 | **Accessibility** | every pair of text colours clears AA contrast (4.5:1) in both themes |
 

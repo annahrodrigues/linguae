@@ -147,6 +147,25 @@ function loadApp(options) {
   };
   const spoken = [];
   const played = [];
+  /* Enough of Web Audio to see which notes a chime asks for. */
+  const chimes = [];
+  const param = () => ({ value: 0, setValueAtTime() {}, exponentialRampToValueAtTime() {} });
+  /* opts.noWebAudio stands in for a browser without it at all. */
+  if (!opts.noWebAudio) win.AudioContext = function () {
+    return {
+      state: "running",
+      currentTime: 0,
+      destination: {},
+      resume() {},
+      createGain: () => ({ gain: param(), connect() {} }),
+      createBiquadFilter: () => ({ type: "", frequency: param(), connect() {} }),
+      createOscillator: () => {
+        const o = { type: "", frequency: param(), connect() {}, start() {}, stop() {} };
+        o.frequency.setValueAtTime = (v) => chimes.push(Math.round(v));
+        return o;
+      }
+    };
+  };
   sandbox.Audio = function () {
     return {
       src: "",
@@ -193,6 +212,7 @@ function loadApp(options) {
   api.answerBox = dom.byId;
   api.spoken = spoken;
   api.played = played;
+  api.chimes = chimes;
   /* Stands in for the manifest, which arrives over fetch in a browser. */
   api.addClips = function (ids, format) {
     if (format) api.AUDIO.format = format;
@@ -697,6 +717,42 @@ test("a lesson only asks you to listen to what can be heard", function () {
     });
   }
   assert.ok(listens > 0, "the one recorded word should still come up to listen to");
+});
+
+/* ---------- the chimes ---------- */
+
+test("checking an answer sounds, and the two outcomes do not sound alike", function () {
+  const a = loadApp({ voices: [NEURAL_FR] });
+  freshSrs(a, "fr");
+  const item = a.course().items[0];
+
+  typingSession(a, item);
+  a.typeAnswer(item.tgt);
+  a.chimes.length = 0;
+  a.submit();
+  const right = a.chimes.slice();
+  assert.ok(right.length >= 2, "a right answer should ring");
+
+  typingSession(a, item);
+  a.typeAnswer("qqqqqqqq");
+  a.chimes.length = 0;
+  a.submit();
+  const wrong = a.chimes.slice();
+  assert.ok(wrong.length >= 1, "a wrong answer should sound too");
+
+  eq([right.join(","), wrong.join(",")].length, 2);
+  assert.notDeepStrictEqual(right, wrong, "the two must not be the same sound");
+  assert.ok(Math.min.apply(null, right) > Math.max.apply(null, wrong),
+    "right rings above wrong: " + right.join(",") + " vs " + wrong.join(","));
+  assert.ok(right[1] > right[0], "and it rises");
+});
+
+test("a lesson still runs where the browser has no Web Audio", function () {
+  const a = loadApp({ noWebAudio: true });
+  freshSrs(a, "fr");
+  const run = playLesson(a);
+  assert.strictEqual(run.session.state, "done");
+  assert.strictEqual(a.chimes.length, 0, "nothing was played, and nothing threw");
 });
 
 /* ---------- a session from end to end ---------- */

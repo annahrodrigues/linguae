@@ -1113,6 +1113,65 @@ function speak(text, lang){
 
 function hasVoiceFor(lang){ return !!voiceFor(lang); }
 
+/* ---- the two chimes ----
+   Played when an answer is checked, and made here out of oscillators rather
+   than loaded as files: a few lines weigh nothing, and nothing is sampled from
+   anyone. Right is a quick rise, two notes a fifth apart with a soft bell on
+   top; wrong is a short low fall, filtered so it thuds rather than rasps.
+   The audio context is created on the first check, which is a user gesture, so
+   browsers let it start. */
+let sfx = null;
+function sfxCtx(){
+  if (sfx !== null) return sfx;
+  try {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    sfx = Ctx ? new Ctx() : false;
+  } catch (e) { sfx = false; }
+  return sfx;
+}
+
+function blip(ctx, at, opts){
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  let node = gain;
+  if (opts.cutoff) {
+    const lp = ctx.createBiquadFilter();
+    lp.type = "lowpass";
+    lp.frequency.value = opts.cutoff;
+    gain.connect(lp);
+    node = lp;
+  }
+  osc.type = opts.type || "sine";
+  osc.frequency.setValueAtTime(opts.from, at);
+  if (opts.to) osc.frequency.exponentialRampToValueAtTime(opts.to, at + opts.dur);
+  /* A few milliseconds of attack, then an exponential tail: a hard start
+     clicks, and an exponential ramp cannot reach zero, so it ends on stop. */
+  gain.gain.setValueAtTime(0.0001, at);
+  gain.gain.exponentialRampToValueAtTime(opts.peak, at + 0.012);
+  gain.gain.exponentialRampToValueAtTime(0.0001, at + opts.dur);
+  osc.connect(gain);
+  node.connect(ctx.destination);
+  osc.start(at);
+  osc.stop(at + opts.dur + 0.02);
+}
+
+function chime(ok){
+  const ctx = sfxCtx();
+  if (!ctx) return;
+  try {
+    if (ctx.state === "suspended") ctx.resume();
+    const t = ctx.currentTime + 0.01;
+    if (ok) {
+      blip(ctx, t,         { from: 784,  dur: 0.11, peak: 0.16, type: "triangle" });
+      blip(ctx, t + 0.085, { from: 1175, dur: 0.20, peak: 0.15, type: "triangle" });
+      blip(ctx, t + 0.085, { from: 2349, dur: 0.16, peak: 0.04, type: "sine" });
+    } else {
+      blip(ctx, t, { from: 196, to: 131, dur: 0.24, peak: 0.19, type: "sawtooth", cutoff: 760 });
+      blip(ctx, t, { from: 98,  to: 65,  dur: 0.26, peak: 0.12, type: "sine" });
+    }
+  } catch (e) { /* audio is a flourish; never let it break a lesson */ }
+}
+
 /* ---- recorded audio ----
    A clip committed to the repository beats the system voice: it sounds the
    same for everyone and does not depend on what each machine happens to have
@@ -1309,6 +1368,7 @@ function submit(){
   }
   sess.lastOk = ok;
   sess.state = "feedback";
+  chime(ok);
   save();
   if (ok && ex.item && ex.kind !== "pick_en") sayItem(ex.item, course().tts);
   render();
@@ -1863,7 +1923,8 @@ function footFor(ex){
     + '>Check answer</button></div>';
 }
 
-/* Skipping shows the answer and files the word for review — it never scolds. */
+/* Skipping gives up on the question: the answer is revealed, the word goes
+   into the schedule, and it costs a heart like any other miss. */
 function skipQuestion(){
   sess.sel = null;
   sess.used = [];
@@ -1946,10 +2007,12 @@ function tapPair(btn, ex){
     if (sess.matched.length === ex.pairs.length) {
       sess.correct++; sess.answered++;
       sess.state = "feedback"; sess.lastOk = true;
+      chime(true);
     }
     render();
   } else {
     const other = app.querySelector('[data-side="' + pSide + '"][data-id="' + pId + '"]');
+    chime(false);
     btn.classList.add("bad");
     if (other) other.classList.add("bad");
     gradeItem(id, false);
