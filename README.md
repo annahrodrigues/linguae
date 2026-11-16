@@ -29,14 +29,15 @@ Pages from building anything and has it copy them across as they are.
 | | |
 |---|---|
 | **Courses** | 7 courses, 7 units and 14 lessons each, 112 words and phrases per course. Spanish, French, German, Italian, Latin and Russian are taught from English; English is taught from Portuguese |
-| **Exercises** | 6 kinds: match the pairs, pick the translation in either direction, listen and transcribe, build from a word bank, and free typing |
+| **Exercises** | 7 kinds: match the pairs, pick the translation in either direction, listen and transcribe, build from a word bank, free typing, and say it out loud |
 | **Marking** | accents and punctuation are normalised, and a one-letter typo counts as correct, with a note |
 | **Spaced repetition** | Leitner boxes at 1, 3, 7, 16 and 35 days; get one wrong and the word drops to box 2 and comes back in the same session |
-| **Practice** | a page of its own with three sets, none of them locked: today's review, a listening drill with nothing on screen but the sound, and the words you have answered wrong, the worst first. Up to 10 words a session, no hearts at stake, 8 XP |
+| **Practice** | a page of its own with four sets, none of them locked: today's review, a listening drill with nothing on screen but the sound, a pronunciation drill you answer by speaking, and the words you have answered wrong, the worst first. Up to 10 words a session, no hearts at stake, 8 XP |
 | **Progress** | 5 crowns per lesson, XP, a daily goal of 30 XP, a day streak and 9 achievements |
 | **Hearts** | 5 per lesson; run out and the lesson restarts |
 | **Sounds** | a recording on each answer, and three for the end of a lesson: a clean run, a run with up to three misses, and one with more; where a browser will not play them, a pair of oscillators answers instead |
 | **Audio** | a recorded clip when the repository has one, otherwise the browser's `speechSynthesis` at the natural rate, on the best voice the system offers — a neural or Google voice over a legacy one; with neither, that word goes quiet rather than be read in another language's accent |
+| **Pronunciation** | the browser's own `SpeechRecognition` listens and the phrase is marked word by word; seven words in ten passes. See the note below on what this can and cannot tell you |
 | **Accessibility** | every pair of text colours clears AA contrast (4.5:1) in both themes, checked by a test that reads the stylesheet |
 
 Progress lives in `localStorage`, one record per course, under the key
@@ -114,6 +115,37 @@ and `tools/kokoro.py` says where to fetch them. The clips themselves are 448 cli
 `assets/audio/index.json` is the whole contract. Without it the app never asks
 for a clip, so the feature costs nothing until the first file lands. Recording
 a language also switches its listening exercises back on, item by item.
+
+## What the pronunciation drill really measures
+
+The drill uses `SpeechRecognition`, the listening half of the Web Speech API,
+which is all a page with no server behind it can reach. Chrome and Edge send the
+audio to Google's recogniser and Safari to Apple's; Firefox has none, and where
+it is missing the set is shown greyed out rather than offered and then broken.
+Chrome also wants the network for it.
+
+What comes back is a transcript with up to five alternative readings, never a
+score. So the question the drill asks is the one the transcript can answer
+honestly — **did the phrase come through as French?** — and it is asked word by
+word, so a phrase half said does not read the same as one missed outright. Every
+alternative counts, because each is a hearing of the same breath and the
+engine's second guess is often its better one; a word one letter out counts as
+the transcript's spelling rather than your mouth, unless the word is too short
+to spare a letter (*oui* and *lui* are not the same word).
+
+Two things this cannot do, and does not claim to:
+
+- **It does not grade a sound.** A recogniser has a language model behind it and
+  snaps what it hears onto real words, so a passable accent passes and a careful
+  one can still fail on a word the engine does not expect. It tells you that you
+  were understood, which is a real thing to know, and not how close you were.
+- **It says nothing about a single phoneme.** A mark per sound — the French `u`
+  against `ou`, a nasal vowel, a dropped liaison — needs a model that scores the
+  audio against the expected phonemes. That exists (Azure's Pronunciation
+  Assessment, Speechace, ELSA) and it is a paid API with a key, which means a
+  server to hold the key: the one thing this app does not have. A local model in
+  WebAssembly would avoid the key and cost tens of megabytes on first load, and
+  Whisper and Vosk transcribe too — they do not score either.
 
 ## Visual identity
 

@@ -337,6 +337,21 @@ main{flex:1;width:100%;max-width:1200px;margin:0 auto;padding-block:28px 64px;
 .speak--hero{width:92px;height:92px;margin:6px auto 22px;background:var(--color-primary);color:#fff;
   border-color:transparent}
 .speak--hero .ms{font-size:40px}
+.mic{width:116px;height:116px;border-radius:50%;border:none;margin:4px auto 18px;display:grid;
+  place-items:center;cursor:pointer;background:var(--color-primary);color:#fff;
+  box-shadow:0 10px 24px -14px rgba(0,0,0,.5);transition:transform var(--t),background var(--t)}
+.mic .ms{font-size:48px}
+.mic:hover:not(:disabled){transform:scale(1.04)}
+.mic:disabled{background:var(--color-border);color:var(--color-text-muted);cursor:default;box-shadow:none}
+.mic.is-live{background:var(--color-coral);animation:listening 1.2s ease-in-out infinite}
+@keyframes listening{0%,100%{box-shadow:0 0 0 0 var(--color-coral-soft)}
+  50%{box-shadow:0 0 0 20px var(--color-coral-soft)}}
+.said{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;font-weight:700;font-size:20px;
+  margin-bottom:8px}
+.said span{border-bottom:3px solid transparent;padding-bottom:2px}
+.said .ok{border-bottom-color:var(--color-primary-ink)}
+.said .no{border-bottom-color:var(--color-coral);color:var(--color-text-muted)}
+.hint--mid{text-align:center}
 .answers{display:grid;gap:12px}
 .answer{display:flex;align-items:center;gap:12px;text-align:left;width:100%;background:var(--color-surface);
   border:1px solid var(--color-border);border-radius:var(--radius-button);padding:16px;
@@ -1129,6 +1144,102 @@ function speak(text, lang){
 
 function hasVoiceFor(lang){ return !!voiceFor(lang); }
 
+/* ---- listening to you ----
+
+   The browser can hear as well as speak, through the same Web Speech API, and
+   that is the whole of what is available to a page with no server behind it.
+   What it hands back is a transcript, never a mark: there is no phoneme score
+   to be had here. So the question this asks is the one it can answer honestly
+   -- did the phrase come through as French -- and the README says what a real
+   score out of ten would take. Chrome, Edge and Safari have it; Firefox does
+   not, which is why nothing is offered where it is missing rather than offered
+   and then broken. */
+const SR = typeof window !== "undefined" && (window.SpeechRecognition || window.webkitSpeechRecognition);
+const canListen = !!SR;
+let rec = null;
+
+function stopMic(){
+  if (!rec) return;
+  try { rec.abort(); } catch (e) {}
+  rec = null;
+}
+
+function listenOnce(lang, done, fail){
+  if (!SR) { fail("unsupported"); return; }
+  stopMic();
+  /* The engine will happily record its own voice reading the word out. */
+  if (canSpeak) { try { window.speechSynthesis.cancel(); } catch (e) {} }
+  try {
+    const r = new SR();
+    rec = r;
+    r.lang = lang;
+    r.continuous = false;
+    r.interimResults = false;
+    /* Every alternative is a hearing of the same breath, and the recogniser's
+       second guess is often the better one. They all go to the scorer. */
+    r.maxAlternatives = 5;
+    let got = false;
+    r.onresult = function(e){
+      got = true;
+      const alts = [], first = e.results[0];
+      for (let i = 0; i < first.length; i++) alts.push(first[i].transcript || "");
+      done(alts);
+    };
+    r.onerror = function(e){ got = true; fail((e && e.error) || "error"); };
+    r.onend = function(){ rec = null; if (!got) fail("no-speech"); };
+    /* Nothing came back at all: an engine that never ends would leave the
+       question waiting on a microphone that is no longer listening. */
+    setTimeout(function(){ if (!got && rec === r) stopMic(); }, 12000);
+    r.start();
+  } catch (e) { rec = null; fail("error"); }
+}
+
+const MIC_SAYS = {
+  "not-allowed": "The microphone is blocked. Allow it for this page, then try again.",
+  "service-not-allowed": "The microphone is blocked. Allow it for this page, then try again.",
+  "audio-capture": "No microphone was found on this device.",
+  "no-speech": "Nothing came through. Try again, a little closer to the microphone.",
+  "network": "The recogniser could not be reached: it needs the network.",
+  "aborted": "That recording stopped early. Try again.",
+  "unsupported": "This browser cannot listen. Chrome, Edge and Safari can."
+};
+function micSays(err){ return MIC_SAYS[err] || "The microphone could not be started. Try again."; }
+
+/* A phrase half heard should not read the same as one missed outright, so the
+   phrase is marked word by word and the share that came through is the score.
+   A word found in any alternative counts as said; one letter apart counts as
+   the recogniser's spelling rather than your mouth, once the word is long
+   enough for a letter to be a slip and not the word itself. */
+const SPEAK_PASS = 0.7;
+
+function sameWord(a, b){
+  if (!a || !b) return false;
+  if (a === b) return true;
+  return a.length > 3 && b.length > 3 && lev(a, b) <= 1;
+}
+
+function scoreSpeech(target, alts){
+  const want = words(target);
+  const heard = (alts || []).filter(Boolean);
+  /* Taken whole first: French runs its words together -- l'eau, qu'est-ce --
+     and where the transcript splits them differently every word would miss. */
+  const whole = heard.some(function(a){ return loose(a) === loose(target); });
+  const pool = [];
+  heard.forEach(function(a){ words(a).forEach(function(w){ pool.push(loose(w)); }); });
+  const left = pool.filter(Boolean);
+  const marks = want.map(function(w){
+    if (whole) return { word: w, ok: true };
+    const key = loose(w);
+    let hit = -1;
+    for (let i = 0; i < left.length; i++) { if (sameWord(key, left[i])) { hit = i; break; } }
+    if (hit > -1) left.splice(hit, 1);
+    return { word: w, ok: hit > -1 };
+  });
+  const got = marks.filter(function(m){ return m.ok; }).length;
+  return { marks: marks, got: got, of: want.length, heard: heard[0] || "",
+           score: want.length ? got / want.length : 0 };
+}
+
 /* ---- the two chimes ----
    Played when an answer is checked, and made here out of oscillators rather
    than loaded as files: a few lines weigh nothing, and nothing is sampled from
@@ -1351,12 +1462,13 @@ function buildLesson(lesson, c, level){
   return queue;
 }
 
-/* Three ways to practise, each a different pool drawn from the same progress.
+/* Four ways to practise, each a different pool drawn from the same progress.
    A lesson teaches a word; these bring it back. None of them is locked behind
    anything: what fills them is what you have already met. */
 const PRACTICE_SETS = [
   { id: "due", title: "Today's review", icon: "exercise" },
   { id: "listen", title: "Listening drill", icon: "headphones" },
+  { id: "speak", title: "Pronunciation", icon: "mic" },
   { id: "mistakes", title: "Your mistakes", icon: "autorenew" }
 ];
 const PRACTICE_SIZE = 10;
@@ -1369,6 +1481,11 @@ function practiceItems(mode, c){
     return c.items.filter(function(it){
       return srsOf(it.id).seen > 0 && canHear(it, c.tts);
     });
+  }
+  if (mode === "speak") {
+    /* Everything met, whether or not the device can read it out: the mouth is
+       what is being practised, and the model to copy is a bonus. */
+    return c.items.filter(function(it){ return srsOf(it.id).seen > 0; });
   }
   if (mode === "mistakes") {
     return c.items.filter(function(it){ return srsOf(it.id).wrong > 0; })
@@ -1388,10 +1505,11 @@ function buildPractice(c, mode){
   const m = mode || "due";
   const picked = practiceItems(m, c).slice(0, PRACTICE_SIZE);
   return shuffle(picked).map(function(it){
-    /* The listening drill is the one set that fixes the shape of the question;
-       the others take whatever the item is ready for. */
-    return m === "listen" ? makeExercise(it, 2, c, true, "listen")
-                          : makeExercise(it, 2, c, canHear(it, c.tts));
+    /* Two of the sets fix the shape of the question -- that shape is the
+       point of them; the others take whatever the item is ready for. */
+    if (m === "listen") return makeExercise(it, 2, c, true, "listen");
+    if (m === "speak") return makeExercise(it, 2, c, canHear(it, c.tts), "speak");
+    return makeExercise(it, 2, c, canHear(it, c.tts));
   });
 }
 
@@ -1416,6 +1534,8 @@ function startLesson(lesson){
 function startPractice(mode){
   const c = course();
   const set = PRACTICE_SETS.filter(function(s){ return s.id === mode; })[0] || PRACTICE_SETS[0];
+  /* Nothing to say into a browser that cannot hear it. */
+  if (set.id === "speak" && !canListen) return;
   const q = buildPractice(c, set.id);
   if (!q.length) return;
   sess = {
@@ -1429,6 +1549,7 @@ function startPractice(mode){
   render();
 }
 function quitLesson(){
+  stopMic();
   sess = null;
   document.documentElement.classList.remove("lesson-mode");
   window.scrollTo(0, 0);
@@ -1442,6 +1563,10 @@ function submit(){
   let ok = false, given = "";
   if (ex.kind === "pick_tgt" || ex.kind === "pick_en" || ex.kind === "listen") {
     ok = sess.sel === ex.answer;
+  } else if (ex.kind === "speak") {
+    /* The recogniser has already scored what it heard; this only reads it. */
+    ok = !!sess.said && sess.said.score >= SPEAK_PASS;
+    given = sess.said ? sess.said.heard : "";
   } else if (ex.kind === "bank") {
     given = sess.used.join(" ");
     ok = loose(given) === loose(ex.parts.join(" "));
@@ -1464,7 +1589,10 @@ function submit(){
   if (ex.item) gradeItem(ex.item.id, ok);
   /* a missed item comes back at the end of the session, in an easier shape */
   if (!ok && ex.item) {
-    const retry = makeExercise(ex.item, 0, course(), canHear(ex.item, course().tts));
+    /* A word you could not say comes back to be said, not to be recognised in
+       a list: the easier shape of a pronunciation question is the same one. */
+    const retry = makeExercise(ex.item, 0, course(), canHear(ex.item, course().tts),
+                               ex.kind === "speak" ? "speak" : null);
     retry.retry = true;
     sess.queue.push(retry);
   }
@@ -1483,6 +1611,8 @@ function advance(){
   sess.idx++;
   sess.sel = null; sess.used = []; sess.picked = null; sess.typo = false; sess.given = "";
   sess.matched = []; sess.spoke = false;
+  sess.said = null; sess.micErr = null; sess.listening = false;
+  stopMic();
   if (sess.idx >= sess.queue.length) return finish();
   sess.state = "ask";
   render();
@@ -1816,12 +1946,19 @@ function pagePractice(){
       empty: courseHasAudio(c)
         ? "Finish a lesson and the words you have met turn up here to be heard."
         : "No " + esc(c.name) + " audio on this device, so there is nothing to listen to yet." },
+    { id: "speak", tone: "gold", title: "Pronunciation",
+      says: "Say the word out loud. The browser listens and marks the phrase word by word.",
+      go: "Start speaking",
+      empty: canListen
+        ? "Finish a lesson and the words you have met turn up here to be said."
+        : "This browser cannot listen. Open Linguae in Chrome, Edge or Safari to say the words." },
     { id: "mistakes", tone: "coral", title: "Your mistakes",
       says: "Every word you have answered wrong, the one you have missed most often first.",
       go: "Practise mistakes",
       empty: "Nothing missed so far. This one fills itself as you go." }
   ].map(function(s){
-    const count = n[s.id];
+    /* A set the device cannot run is empty however many words are in it. */
+    const count = s.id === "speak" && !canListen ? 0 : n[s.id];
     const meta = PRACTICE_SETS.filter(function(x){ return x.id === s.id; })[0];
     const tally = count ? (s.id === "mistakes" ? " tally--miss" : "") : " tally--none";
     return '<article class="card pcard">'
@@ -2020,6 +2157,24 @@ function bodyFor(ex, locked){
       + spkBtn(ex.item, "speak--hero")
       + optList(ex, locked, function(it){ return esc(it.en); });
   }
+  if (ex.kind === "speak") {
+    const said = sess.said;
+    const note = !canListen ? micSays("unsupported")
+               : (sess.micErr ? micSays(sess.micErr)
+               : (sess.listening ? "Listening… say it now."
+               : (said ? "" : "Tap the microphone and say it out loud.")));
+    return qhead("Pronunciation", "Say this out loud in " + esc(c.name))
+      + '<div class="prompt">' + spkBtn(ex.item)
+      + '<div class="bubble" style="font-size:21px">' + esc(ex.item.tgt) + romOf(ex.item)
+      + '<span class="rom">' + esc(ex.item.en) + '</span></div></div>'
+      + '<button class="mic' + (sess.listening ? " is-live" : "") + '" id="mic"'
+      + (locked || !canListen ? " disabled" : "")
+      + ' aria-label="' + (sess.listening ? "Listening" : "Record what you say") + '">'
+      + ic(sess.listening ? "graphic_eq" : "mic") + '</button>'
+      + (said ? saidHtml(said) : "")
+      + (note ? '<p class="hint hint--mid">' + note + '</p>' : "");
+  }
+
   if (ex.kind === "bank") {
     const slot = sess.used.map(function(w, i){
       return '<button class="tile-w" data-un="' + i + '"' + (locked ? " disabled" : "") + '>' + esc(w) + '</button>';
@@ -2043,6 +2198,42 @@ function bodyFor(ex, locked){
     + '<textarea class="input" id="answer" rows="2" autocomplete="off" autocapitalize="off" spellcheck="false"'
     + (locked ? " disabled" : "") + '>' + esc(sess.given || "") + '</textarea>'
     + '<p class="hint">' + note + '</p>';
+}
+
+/* What came through, word by word, under the phrase as it is written: the
+   score is a share of these, so showing the share without showing which words
+   it was made of would leave nothing to work on. */
+function saidHtml(said){
+  return '<p class="said">' + said.marks.map(function(m){
+      return '<span class="' + (m.ok ? "ok" : "no") + '">' + esc(m.word) + '</span>';
+    /* The gap between them is the flex gap, but a space has to be in the
+       markup too, or a screen reader reads the phrase as one long word. */
+    }).join(" ") + '</p>'
+    + '<p class="hint hint--mid">' + (said.heard
+        ? 'Heard: &ldquo;' + esc(said.heard) + '&rdquo;'
+        : "Nothing came through.") + '</p>';
+}
+
+/* The recording is the answer, so it is checked the moment it ends: there is
+   nothing for a Check button to wait for, the way a chosen option waits. */
+function startMic(){
+  const ex = currentEx();
+  if (!canListen || sess.listening || sess.state !== "ask" || ex.kind !== "speak") return;
+  sess.listening = true;
+  sess.micErr = null;
+  sess.said = null;
+  render();
+  listenOnce(course().tts, function(alts){
+    if (!sess || !sess.listening) return;
+    sess.listening = false;
+    sess.said = scoreSpeech(ex.item.tgt, alts);
+    submit();
+  }, function(err){
+    if (!sess || !sess.listening) return;
+    sess.listening = false;
+    sess.micErr = err;
+    render();
+  });
 }
 
 function optList(ex, locked, label){
@@ -2107,6 +2298,13 @@ function footFor(ex){
     return '<div class="footrow"><span class="kbdhint">Tap a word, then its translation</span>'
       + '<button class="btn" disabled>Match all five pairs</button></div>';
   }
+  if (ex.kind === "speak") {
+    return '<div class="footrow"><button class="skip" id="skip">Skip</button>'
+      + '<span class="kbdhint">' + (canListen ? "Tap the microphone, or press Enter"
+                                              : "Nothing to record here — skip to carry on") + '</span>'
+      + '<button class="btn" disabled>'
+      + (sess.listening ? "Listening…" : "Say it out loud") + '</button></div>';
+  }
   const ready = ex.kind === "bank" ? sess.used.length > 0
               : (ex.kind === "write" ? true : sess.sel !== null);
   return '<div class="footrow">'
@@ -2119,9 +2317,12 @@ function footFor(ex){
 /* Skipping gives up on the question: the answer is revealed, the word goes
    into the schedule, and it costs a heart like any other miss. */
 function skipQuestion(){
+  stopMic();
   sess.sel = null;
   sess.used = [];
   sess.given = "";
+  sess.said = null;
+  sess.listening = false;
   const ta = document.getElementById("answer");
   if (ta) ta.value = "";
   submit();
@@ -2157,6 +2358,8 @@ function wireLesson(){
   app.querySelectorAll("[data-side]").forEach(function(b){
     b.addEventListener("click", function(){ tapPair(b, ex); });
   });
+  const mic = document.getElementById("mic");
+  if (mic) mic.addEventListener("click", startMic);
   const chk = document.getElementById("check");
   const ta = document.getElementById("answer");
   if (ta) {
@@ -2278,7 +2481,8 @@ function optionIndexFor(key){
 document.addEventListener("keydown", function(e){
   if (!sess) return;
   if (e.key === "Enter" && e.target.tagName !== "TEXTAREA") {
-    const c = document.getElementById("cont") || document.getElementById("check");
+    const c = document.getElementById("cont") || document.getElementById("check")
+           || document.getElementById("mic");
     if (c && !c.disabled) { e.preventDefault(); c.click(); }
     return;
   }

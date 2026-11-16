@@ -118,6 +118,8 @@ const EXPORTS = `
   submit: submit, advance: advance, tapPair: tapPair, optionIndexFor: optionIndexFor,
   endingFor: endingFor,
   hasVoiceFor: hasVoiceFor, voiceFor: voiceFor, speak: speak, choose: choose,
+  scoreSpeech: scoreSpeech, sameWord: sameWord, startMic: startMic, micSays: micSays,
+  canListen: canListen, bodyFor: bodyFor, footFor: footFor,
   AUDIO: AUDIO, clipFor: clipFor, sayItem: sayItem, canHear: canHear, FLAGS: FLAGS,
   courseHasAudio: courseHasAudio,
   pageAchievements: pageAchievements, pageProgress: pageProgress, achEarned: achEarned,
@@ -193,6 +195,33 @@ function loadApp(options) {
       }
     };
   };
+  /* opts.hears stands in for the recogniser: an array of alternatives it will
+     hand back, or a string naming the error it fails with. Absent altogether
+     stands in for a browser that cannot listen, Firefox among them. */
+  const recordings = [];
+  if (opts.hears !== undefined) {
+    win.SpeechRecognition = function () {
+      return {
+        lang: "", continuous: true, interimResults: true, maxAlternatives: 1,
+        onresult: null, onerror: null, onend: null,
+        abort() {}, stop() {},
+        start() {
+          recordings.push({ lang: this.lang, alternatives: this.maxAlternatives,
+                            interim: this.interimResults });
+          if (typeof opts.hears === "string") {
+            if (this.onerror) this.onerror({ error: opts.hears });
+          } else if (this.onresult) {
+            this.onresult({
+              results: [opts.hears.map(function (t) {
+                return { transcript: t, confidence: 0.9 };
+              })]
+            });
+          }
+          if (this.onend) this.onend();
+        }
+      };
+    };
+  }
   if (opts.voices) {
     win.speechSynthesis = {
       getVoices() { return opts.voices; },
@@ -221,6 +250,7 @@ function loadApp(options) {
   api.reseed = sandbox.__reseed;
   api.answerBox = dom.byId;
   api.spoken = spoken;
+  api.recordings = recordings;
   api.played = played;
   api.chimes = chimes;
   /* Run every callback waiting on a timer, in the order they were set. */
@@ -1384,6 +1414,259 @@ test("a Review button that hands over its click still runs today's review", func
   /* The older buttons pass the event straight through as the first argument. */
   a.startPractice({ type: "click" });
   assert.strictEqual(a.session().set, "due", "an event is not a set name");
+});
+
+/* ---------- saying it out loud ---------- */
+
+function wordCount(s) { return String(s).split(/\s+/).length; }
+function firstWord(s) { return String(s).split(/\s+/)[0]; }
+
+/* The recogniser hands back a sentence, never a mark, so everything the
+   pronunciation exercise knows comes out of this one function. */
+test("a word said as written comes through whole", function () {
+  const a = loadApp();
+  const r = a.scoreSpeech("bonjour", ["bonjour"]);
+  assert.strictEqual(r.score, 1);
+  eq(r.marks, [{ word: "bonjour", ok: true }]);
+  assert.strictEqual(r.heard, "bonjour", "and what was heard is kept to show");
+});
+
+test("the marking looks past case, accents and punctuation", function () {
+  const a = loadApp();
+  assert.strictEqual(a.scoreSpeech("Tr\u00e8s bien", ["tres bien."]).score, 1);
+  assert.strictEqual(a.scoreSpeech("merci", ["Merci!"]).score, 1);
+});
+
+test("a phrase the recogniser splits differently still counts", function () {
+  const a = loadApp();
+  /* French runs its words together, and the transcript does not always agree
+     about where they end; taken whole, the sounds are the same. */
+  assert.strictEqual(a.scoreSpeech("l'eau", ["l eau"]).score, 1, "the elision");
+  assert.strictEqual(a.scoreSpeech("qu'est-ce que c'est", ["qu est ce que c est"]).score, 1);
+});
+
+test("a phrase half heard is marked word by word", function () {
+  const a = loadApp();
+  const r = a.scoreSpeech("je voudrais un cafe", ["je voudrais un the"]);
+  assert.strictEqual(r.of, 4);
+  assert.strictEqual(r.got, 3);
+  eq(r.marks.map(function (m) { return m.ok; }), [true, true, true, false],
+     "the word that did not come through is the one marked");
+});
+
+test("a word said once does not answer for a word said twice", function () {
+  const a = loadApp();
+  /* Every word of the phrase needs its own hearing. Without that, a transcript
+     holding the word at all would mark the whole phrase said. */
+  const r = a.scoreSpeech("merci merci", ["merci"]);
+  assert.strictEqual(r.got, 1);
+  assert.strictEqual(r.of, 2);
+});
+
+test("nothing heard is nothing said", function () {
+  const a = loadApp();
+  const r = a.scoreSpeech("bonjour", []);
+  assert.strictEqual(r.score, 0);
+  eq(r.marks, [{ word: "bonjour", ok: false }]);
+  assert.strictEqual(r.heard, "");
+});
+
+test("the recogniser's other guesses count too", function () {
+  const a = loadApp();
+  /* Five alternatives are five hearings of the same breath. Reading only the
+     first fails a good answer over the engine's own second thoughts. */
+  assert.strictEqual(a.scoreSpeech("au revoir", ["oh revoir", "au revoir"]).score, 1);
+});
+
+test("a letter out is the transcript's spelling, unless the word is too short to spare one", function () {
+  const a = loadApp();
+  assert.strictEqual(a.scoreSpeech("bonjour", ["bonjours"]).score, 1, "one letter on a long word");
+  assert.strictEqual(a.scoreSpeech("oui", ["lui"]).score, 0,
+    "oui and lui are a letter apart and are not the same word");
+  assert.strictEqual(a.scoreSpeech("merci", ["mardi"]).score, 0, "two letters out is a miss");
+});
+
+test("the pass mark is seven words in ten, not any word at all", function () {
+  const a = loadApp();
+  const four = "je voudrais un cafe";
+  /* Written out rather than read from the app: a test that borrows the
+     threshold it is checking agrees with whatever the app happens to hold. */
+  assert.ok(a.scoreSpeech(four, ["je voudrais un the"]).score >= 0.7, "three of four passes");
+  assert.ok(a.scoreSpeech(four, ["je voudrais deux thes"]).score < 0.7, "two of four does not");
+});
+
+test("the pronunciation drill asks only to speak, and only words already met", function () {
+  const a = loadApp({ hears: [], voices: [NEURAL_FR] });
+  freshSrs(a, "fr");
+  const c = a.course();
+  const met = c.items.slice(0, 12);
+  met.forEach(function (it) { a.gradeItem(it.id, true); });
+
+  const q = a.buildPractice(c, "speak");
+  assert.strictEqual(q.length, 10, "ten at a time");
+  const seen = {};
+  met.forEach(function (it) { seen[it.id] = true; });
+  q.forEach(function (ex) {
+    assert.strictEqual(ex.kind, "speak", "the drill fixes the shape of the question");
+    assert.ok(seen[ex.item.id], "a drill is no place to meet a word for the first time");
+  });
+});
+
+test("the drill does not wait on a device that can read the words out", function () {
+  const a = loadApp({ hears: [] });
+  freshSrs(a, "fr");
+  const c = a.course();
+  c.items.slice(0, 4).forEach(function (it) { a.gradeItem(it.id, true); });
+  assert.strictEqual(a.practiceItems("speak", c).length, 4,
+    "the mouth is what is being practised; hearing the model is a bonus");
+  assert.strictEqual(a.practiceItems("listen", c).length, 0, "where the ear needs one");
+});
+
+test("a browser that cannot listen is not asked to", function () {
+  const quiet = loadApp();
+  freshSrs(quiet, "fr");
+  quiet.course().items.slice(0, 4).forEach(function (it) { quiet.gradeItem(it.id, true); });
+  assert.strictEqual(quiet.canListen, false);
+  quiet.startPractice("speak");
+  assert.strictEqual(quiet.session(), null, "no session where nothing can be heard");
+  const html = quiet.pagePractice();
+  assert.ok(html.indexOf('data-practice="speak" disabled') > -1, "and the card says so");
+  assert.ok(html.indexOf("Chrome, Edge or Safari") > -1, "and says where it does work");
+
+  const heard = loadApp({ hears: [] });
+  freshSrs(heard, "fr");
+  heard.course().items.slice(0, 4).forEach(function (it) { heard.gradeItem(it.id, true); });
+  assert.strictEqual(heard.canListen, true);
+  const ok = heard.pagePractice();
+  assert.ok(ok.indexOf('data-practice="speak"') > -1
+    && ok.indexOf('data-practice="speak" disabled') === -1, "where it does, the card is ready");
+});
+
+/* The kind is drawn at random, so these plant the question they are about. */
+function frWord(pick) {
+  /* The item is chosen before the app that will hear it is loaded, because the
+     stub recogniser has to be told what to say back. */
+  const a = loadApp();
+  a.setActive("fr");
+  const items = a.course().items;
+  return pick ? items.filter(pick)[0] : items[0];
+}
+
+function speakSession(a, item) {
+  a.startLesson(a.course().lessons[0]);
+  const s = a.session();
+  s.queue[s.idx] = { id: item.id, item: item, kind: "speak" };
+  s.state = "ask";
+  return s;
+}
+
+test("the recording is the answer: it is checked the moment it ends", function () {
+  const item = frWord();
+  const a = loadApp({ hears: [item.tgt] });
+  freshSrs(a, "fr");
+  const s = speakSession(a, item);
+  a.startMic();
+
+  assert.strictEqual(s.listening, false, "the microphone is let go");
+  assert.strictEqual(s.state, "feedback", "and nothing is waiting on a Check button");
+  assert.strictEqual(s.lastOk, true);
+  assert.strictEqual(s.correct, 1);
+  assert.strictEqual(a.srsOf(item.id).box, 1, "the word moves on like any other");
+  assert.strictEqual(a.recordings[0].lang, a.course().tts, "asked for in the right language");
+  assert.ok(a.recordings[0].alternatives > 1, "with room for the engine's other guesses");
+});
+
+test("a phrase mostly said passes, one mostly missed does not", function () {
+  /* The shape of the phrase is planted rather than found: what is being
+     checked is the mark the lesson puts on a part-heard answer, and no course
+     owes this test a phrase of exactly four words. */
+  const phrase = { id: frWord().id, kind: "p",
+                   tgt: "je voudrais un cafe", en: "I would like a coffee" };
+
+  const most = loadApp({ hears: ["je voudrais un the"] });
+  freshSrs(most, "fr");
+  speakSession(most, phrase);
+  most.startMic();
+  assert.strictEqual(most.session().lastOk, true, "three words of the four is a pass");
+
+  const few = loadApp({ hears: ["je voudrais deux thes"] });
+  freshSrs(few, "fr");
+  speakSession(few, phrase);
+  few.startMic();
+  assert.strictEqual(few.session().lastOk, false, "two of the four is not");
+});
+
+test("a word that did not come through is a miss, and comes back to be said", function () {
+  const item = frWord();
+  const a = loadApp({ hears: ["something else entirely"] });
+  freshSrs(a, "fr");
+  const s = speakSession(a, item);
+  const was = s.queue.length;
+  a.startMic();
+
+  assert.strictEqual(s.lastOk, false);
+  assert.strictEqual(s.mistakes, 1);
+  assert.strictEqual(s.hearts, 4, "in a lesson it costs a heart like any other answer");
+  assert.strictEqual(s.queue.length, was + 1, "and the word is queued again");
+  assert.strictEqual(s.queue[s.queue.length - 1].kind, "speak",
+    "to be said, not to be picked out of a list");
+});
+
+test("a microphone that will not start is not a wrong answer", function () {
+  const item = frWord();
+  const a = loadApp({ hears: "not-allowed" });
+  freshSrs(a, "fr");
+  const s = speakSession(a, item);
+  a.startMic();
+
+  assert.strictEqual(s.state, "ask", "the question is still waiting");
+  assert.strictEqual(s.answered, 0, "nothing was answered");
+  assert.strictEqual(s.hearts, 5, "and nothing was lost");
+  assert.strictEqual(s.micErr, "not-allowed");
+  assert.strictEqual(a.srsOf(item.id).seen, 0, "the word was not graded either");
+  assert.ok(a.micSays("not-allowed").indexOf("microphone") > -1, "and the page says what to do");
+});
+
+test("silence is told apart from a microphone that never opened", function () {
+  const item = frWord();
+  const a = loadApp({ hears: "no-speech" });
+  freshSrs(a, "fr");
+  const s = speakSession(a, item);
+  a.startMic();
+  assert.strictEqual(s.micErr, "no-speech");
+  assert.notStrictEqual(a.micSays("no-speech"), a.micSays("not-allowed"),
+    "two different things to do about it");
+});
+
+test("the question shows the phrase, the meaning and which words came through", function () {
+  const item = frWord(function (x) { return wordCount(x.tgt) > 1; });
+  const a = loadApp({ hears: [firstWord(item.tgt)], voices: [NEURAL_FR] });
+  freshSrs(a, "fr");
+  const s = speakSession(a, item);
+  let html = a.bodyFor(s.queue[s.idx], false);
+  assert.ok(html.indexOf('id="mic"') > -1, "a microphone to tap");
+  assert.strictEqual(html.indexOf('id="mic" disabled'), -1, "live, where the browser can listen");
+  assert.ok(html.indexOf(item.en) > -1, "and what the phrase means");
+
+  a.startMic();
+  html = a.bodyFor(s.queue[s.idx], true);
+  const said = a.session().said.marks;
+  assert.ok(html.indexOf('<span class="ok">' + said[0].word + '</span>') > -1,
+    "the word that came through is marked as heard");
+  assert.ok(html.indexOf('<span class="no">' + said[said.length - 1].word + '</span>') > -1,
+    "and the one that did not is marked as missed");
+  assert.ok(html.indexOf("Heard:") > -1, "with what the recogniser actually heard");
+});
+
+test("where there is nothing to record with, the microphone is not offered", function () {
+  const a = loadApp({ voices: [NEURAL_FR] });
+  freshSrs(a, "fr");
+  const item = a.course().items[0];
+  const s = speakSession(a, item);
+  const html = a.bodyFor(s.queue[s.idx], false);
+  assert.ok(html.indexOf('id="mic" disabled') > -1, "the button is dead");
+  assert.ok(html.indexOf("cannot listen") > -1, "and the page says why");
+  assert.ok(a.footFor(s.queue[s.idx]).indexOf('id="skip"') > -1, "there is still a way past it");
 });
 
 test("the progress page is headed by Leon climbing", function () {
