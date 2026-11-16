@@ -1093,6 +1093,9 @@ test("five mismatched pairs end the lesson, the same as five wrong answers", fun
   }
   assert.strictEqual(s.hearts, 0);
   assert.strictEqual(s.state, "dead", "the lesson ends where the hearts run out");
+  /* Nothing was finished, so there is no score to report. */
+  assert.strictEqual(a.answerBox.app.innerHTML.indexOf("0 of 0"), -1,
+    "the end screen should not offer a score of nothing");
 });
 
 test("in a match the word itself plays, and only the half being learnt", function () {

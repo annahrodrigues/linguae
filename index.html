@@ -2075,8 +2075,13 @@ function tapPair(btn, ex){
 function viewDead(){
   return '<div class="wrap sheet">' + mascotImg("thinking", 190)
     + '<h1>Let\'s take this one again</h1>'
-    + '<p>You answered ' + sess.correct + ' of ' + sess.answered
-    + ' correctly, and the words you missed are already queued for review.</p>'
+    /* A lesson can now end inside the opening match, where nothing has been
+       finished yet and a score would read "0 of 0". */
+    + (sess.answered
+        ? '<p>You answered ' + sess.correct + ' of ' + sess.answered
+          + ' correctly, and the words you missed are already queued for review.</p>'
+        : '<p>The hearts ran out before a question was through. The words you '
+          + 'missed are already queued for review.</p>')
     + '<button class="btn btn--primary btn--full" id="again">Retry the lesson</button>'
     + '<button class="btn btn--outline btn--full" id="leave">Back to the path</button></div>';
 }
