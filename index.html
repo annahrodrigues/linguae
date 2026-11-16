@@ -2059,8 +2059,14 @@ function tapPair(btn, ex){
     if (other) other.classList.add("bad");
     gradeItem(id, false);
     gradeItem(pId, false);
+    /* A pair that does not match is a wrong answer like any other, and costs
+       the same heart. Both words go back a box, but the tap was one mistake,
+       not two, so the lesson is charged once. */
+    sess.mistakes++;
+    if (sess.hearts !== Infinity) sess.hearts--;
     sess.picked = null;
     save();
+    if (sess.hearts <= 0) { sess.state = "dead"; render(); return; }
     setTimeout(render, 320);
   }
 }

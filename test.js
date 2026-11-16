@@ -1065,6 +1065,36 @@ function openMatch(a) {
   return ex;
 }
 
+test("a mismatched pair costs a heart and marks the lesson", function () {
+  const a = loadApp();
+  const ex = openMatch(a);
+  const s = a.session();
+  assert.strictEqual(s.hearts, 5, "a lesson opens with five");
+
+  a.tapPair(fakePair("en", ex.pairs[0].id), ex);
+  a.tapPair(fakePair("tgt", ex.pairs[1].id), ex);
+  assert.strictEqual(s.hearts, 4, "a pair that does not match costs one");
+  assert.strictEqual(s.mistakes, 1, "one tap is one mistake, though both words go back");
+
+  /* A match that lands costs nothing. */
+  a.tapPair(fakePair("en", ex.pairs[0].id), ex);
+  a.tapPair(fakePair("tgt", ex.pairs[0].id), ex);
+  assert.strictEqual(s.hearts, 4);
+  assert.strictEqual(s.mistakes, 1);
+});
+
+test("five mismatched pairs end the lesson, the same as five wrong answers", function () {
+  const a = loadApp();
+  const ex = openMatch(a);
+  const s = a.session();
+  for (let i = 0; i < 5; i++) {
+    a.tapPair(fakePair("en", ex.pairs[0].id), ex);
+    a.tapPair(fakePair("tgt", ex.pairs[1].id), ex);
+  }
+  assert.strictEqual(s.hearts, 0);
+  assert.strictEqual(s.state, "dead", "the lesson ends where the hearts run out");
+});
+
 test("in a match the word itself plays, and only the half being learnt", function () {
   const a = loadApp({ voices: [NEURAL_FR] });
   const ex = openMatch(a);
