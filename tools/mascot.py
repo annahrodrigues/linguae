@@ -10,7 +10,10 @@ transparency has to be reconstructed rather than kept. Thresholding alone eats
 the whites — the eyes, the brim of a sun hat — so the background is found by
 flooding in from every border pixel instead: colour or darkness marks the
 artwork, the flood marks the background, and whatever the flood cannot reach is
-enclosed by the drawing and belongs to it.
+enclosed by the drawing and belongs to it -- the white of an eye, the shine on
+a cheek. Trying to judge those patches by their size or their colour cut the
+eyes out of every drawing that arrived small: at GIF size a face is made of
+patches a few pixels across, in the very greys the export checkerboard uses.
 
 A file that already has real transparency is used as it is.
 
@@ -22,13 +25,37 @@ import os
 import sys
 
 import numpy as np
-from PIL import Image, ImageDraw, ImageFilter
+from PIL import Image, ImageDraw
 
 # A pixel is artwork if it is this far from grey, or this much darker than the
 # lightest the flattened background ever gets.
 SATURATION = 18
 DARKNESS = 150
-SPECK = 25          # checker squares only joined diagonally are not real holes
+def reach(art):
+    """The background: every non-drawing pixel the outside can get to.
+
+    The flood has to count a diagonal step as a step. A checkerboard that the
+    drawing crosses leaves squares joined to the rest only at a corner, and a
+    flood that moves in fours stops at that corner and leaves them behind as
+    false holes. So the four-way flood is run, then any non-drawing pixel that
+    merely touches what it reached becomes a seed for the next pass, until
+    nothing new is touched -- two or three passes in practice."""
+    flag = Image.fromarray(np.where(art, 255, 0).astype(np.uint8), "L").copy()
+    px = flag.load()
+    w, h = flag.size
+    seeds = ([(x, 0) for x in range(w)] + [(x, h - 1) for x in range(w)]
+             + [(0, y) for y in range(h)] + [(w - 1, y) for y in range(h)])
+    while seeds:
+        for xy in seeds:
+            if px[xy] == 0:
+                ImageDraw.floodfill(flag, xy, 128, thresh=0)
+        bg = np.asarray(flag) == 128
+        touching = bg.copy()
+        for dy in (-1, 0, 1):
+            for dx in (-1, 0, 1):
+                touching |= np.roll(np.roll(bg, dy, 0), dx, 1)
+        seeds = [(int(x), int(y)) for y, x in np.argwhere(touching & ~art & ~bg)]
+    return np.asarray(flag) == 128
 
 
 def cut(path):
@@ -47,20 +74,7 @@ def cut_image(src):
     mx = rgb.max(axis=2)
     art = ((mx - rgb.min(axis=2)) >= SATURATION) | (mx < DARKNESS)
 
-    # .copy(): a fromarray image is read-only and floodfill silently does nothing.
-    flag = Image.fromarray(np.where(art, 255, 0).astype(np.uint8), "L").copy()
-    w, h = flag.size
-    px = flag.load()
-    border = ([(x, 0) for x in range(w)] + [(x, h - 1) for x in range(w)]
-              + [(0, y) for y in range(h)] + [(w - 1, y) for y in range(h)])
-    for xy in border:
-        if px[xy] == 0:
-            ImageDraw.floodfill(flag, xy, 128, thresh=0)
-    bg = np.asarray(flag) == 128
-
-    holes = Image.fromarray(np.where(~bg & ~art, 255, 0).astype(np.uint8), "L")
-    holes = holes.filter(ImageFilter.MinFilter(SPECK)).filter(ImageFilter.MaxFilter(SPECK))
-    bg = bg | (~art & (np.asarray(holes) == 0))
+    bg = reach(art)
 
     alpha = np.where(bg, 0, 255).astype(np.uint8)
     return Image.fromarray(np.dstack([rgb.astype(np.uint8), alpha]), "RGBA"), \
