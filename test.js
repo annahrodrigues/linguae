@@ -113,6 +113,7 @@ const EXPORTS = `
   crownsOf: crownsOf, unlocked: unlocked, course: course, prog: prog,
   pickKind: pickKind, makeExercise: makeExercise,
   buildLesson: buildLesson, buildPractice: buildPractice,
+  practiceItems: practiceItems, pagePractice: pagePractice, PRACTICE_SETS: PRACTICE_SETS,
   startLesson: startLesson, startPractice: startPractice,
   submit: submit, advance: advance, tapPair: tapPair,
   hasVoiceFor: hasVoiceFor, voiceFor: voiceFor, speak: speak, choose: choose,
@@ -1153,6 +1154,98 @@ test("spaced review pays less and leaves crowns alone", function () {
   assert.strictEqual(a.session().gained, 8);
   assert.strictEqual(a.prog().xp, xp + 8);
   assert.strictEqual(a.crownsOf(lesson.id), crowns, "review earns no crown");
+});
+
+/* ---------- the three practice sets ---------- */
+
+test("the mistakes set holds only what was missed, the worst of it first", function () {
+  const a = loadApp();
+  freshSrs(a, "fr");
+  const c = a.course();
+  const missed = c.items[0], worse = c.items[1], clean = c.items[2];
+  a.gradeItem(missed.id, false);
+  a.gradeItem(worse.id, false);
+  a.gradeItem(worse.id, false);
+  a.gradeItem(clean.id, true);
+
+  eq(a.practiceItems("mistakes", c).map(function (it) { return it.id; }),
+     [worse.id, missed.id], "two missed words, the worse one first");
+});
+
+test("the listening drill asks only by ear, and only what has been met", function () {
+  const a = loadApp({ voices: [NEURAL_FR] });
+  freshSrs(a, "fr");
+  const c = a.course();
+  const met = c.items.slice(0, 12);
+  met.forEach(function (it) { a.gradeItem(it.id, true); });
+
+  const q = a.buildPractice(c, "listen");
+  assert.strictEqual(q.length, 10, "ten at a time, out of the twelve met");
+  const seen = {};
+  met.forEach(function (it) { seen[it.id] = true; });
+  q.forEach(function (ex) {
+    assert.strictEqual(ex.kind, "listen", "the drill fixes the shape of the question");
+    assert.ok(seen[ex.item.id], "a drill is no place to meet a word for the first time");
+  });
+});
+
+test("with no voice and no recording there is nothing to listen to", function () {
+  const a = loadApp();
+  freshSrs(a, "fr");
+  const c = a.course();
+  c.items.slice(0, 5).forEach(function (it) { a.gradeItem(it.id, true); });
+  eq(a.practiceItems("listen", c), [], "nothing can be played");
+  eq(a.buildPractice(c, "listen"), [], "so no session is built");
+});
+
+test("a practice set starts a session made of its own words", function () {
+  const a = loadApp({ voices: [NEURAL_FR] });
+  freshSrs(a, "fr");
+  const c = a.course();
+  const missed = c.items.slice(0, 14);
+  missed.forEach(function (it) { a.gradeItem(it.id, false); });
+
+  a.startPractice("mistakes");
+  const s = a.session();
+  assert.strictEqual(s.mode, "practice");
+  assert.strictEqual(s.set, "mistakes");
+  assert.strictEqual(s.hearts, Infinity, "practice never costs a heart");
+  assert.strictEqual(s.queue.length, 10);
+  const inSet = {};
+  missed.forEach(function (it) { inSet[it.id] = true; });
+  s.queue.forEach(function (ex) {
+    assert.ok(inSet[ex.item.id], ex.item.tgt + " was never missed");
+  });
+});
+
+test("a Review button that hands over its click still runs today's review", function () {
+  const a = loadApp({ voices: [NEURAL_FR] });
+  freshSrs(a, "fr");
+  a.course().items.slice(0, 6).forEach(function (it) { a.gradeItem(it.id, true); });
+  Object.keys(a.prog().srs).forEach(function (id) { a.prog().srs[id].due = Date.now() - 1000; });
+
+  /* The older buttons pass the event straight through as the first argument. */
+  a.startPractice({ type: "click" });
+  assert.strictEqual(a.session().set, "due", "an event is not a set name");
+});
+
+test("the practice page counts each set and offers only what it can run", function () {
+  const a = loadApp({ voices: [NEURAL_FR] });
+  freshSrs(a, "fr");
+  let html = a.pagePractice();
+  assert.ok(html.indexOf('data-practice="listen" disabled') > -1, "nothing met yet");
+  assert.ok(html.indexOf('data-practice="mistakes" disabled') > -1, "nothing missed yet");
+  assert.strictEqual(html.indexOf('data-practice="due"'), -1, "and nothing to review");
+
+  const c = a.course();
+  c.items.slice(0, 3).forEach(function (it) { a.gradeItem(it.id, false); });
+  Object.keys(a.prog().srs).forEach(function (id) { a.prog().srs[id].due = Date.now() - 1000; });
+  html = a.pagePractice();
+  assert.ok(html.indexOf("3 words are waiting") > -1, "the review says how many are ripe");
+  assert.ok(html.indexOf('data-practice="mistakes"') > -1
+    && html.indexOf('data-practice="mistakes" disabled') === -1, "the mistakes set is ready");
+  assert.ok(html.indexOf('data-practice="listen"') > -1
+    && html.indexOf('data-practice="listen" disabled') === -1, "and so is the drill");
 });
 
 test("progress is kept per course", function () {

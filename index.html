@@ -260,6 +260,16 @@ main{flex:1;width:100%;max-width:1200px;margin:0 auto;padding-block:28px 64px;
   color:var(--color-text-muted)}
 .badge.locked .state{color:var(--color-text-muted)}
 
+/* ---------- practice ---------- */
+.pgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(258px,1fr));gap:16px}
+.pcard{display:flex;flex-direction:column}
+.pcard h3{font-size:17px;margin:13px 0 5px}
+.pcard p{font-size:13px;color:var(--color-text-muted);flex:1;margin-bottom:15px}
+.tally{font-family:var(--font-heading);font-weight:700;font-size:13px;line-height:1;
+  padding:7px 11px;border-radius:100px;background:var(--tile-mint);color:var(--color-primary-ink)}
+.tally--miss{background:var(--tile-coral);color:var(--color-coral-ink)}
+.tally--none{background:var(--color-border);color:var(--color-text-muted)}
+
 /* ---------- progress & vocabulary ---------- */
 .tabs{display:flex;gap:6px;background:var(--color-surface);border:1px solid var(--color-border);
   border-radius:12px;padding:4px;align-self:flex-start}
@@ -1300,8 +1310,8 @@ function pickKind(item, level, audioOk){
   return bag[Math.floor(Math.random() * bag.length)];
 }
 
-function makeExercise(item, level, c, audioOk){
-  const kind = pickKind(item, level, audioOk);
+function makeExercise(item, level, c, audioOk, forced){
+  const kind = forced || pickKind(item, level, audioOk);
   const pool = c.items.filter(function(x){ return x.kind === item.kind && x.id !== item.id; });
   const base = { id: item.id, item: item, kind: kind };
 
@@ -1335,12 +1345,48 @@ function buildLesson(lesson, c, level){
   return queue;
 }
 
-function buildPractice(c){
+/* Three ways to practise, each a different pool drawn from the same progress.
+   A lesson teaches a word; these bring it back. None of them is locked behind
+   anything: what fills them is what you have already met. */
+const PRACTICE_SETS = [
+  { id: "due", title: "Today's review", icon: "exercise" },
+  { id: "listen", title: "Listening drill", icon: "headphones" },
+  { id: "mistakes", title: "Your mistakes", icon: "autorenew" }
+];
+const PRACTICE_SIZE = 10;
+
+function practiceItems(mode, c){
+  const p = prog();
+  if (mode === "listen") {
+    /* Only what can actually be played, and only what has been met: a drill is
+       no place to meet a word for the first time. */
+    return c.items.filter(function(it){
+      return srsOf(it.id).seen > 0 && canHear(it, c.tts);
+    });
+  }
+  if (mode === "mistakes") {
+    return c.items.filter(function(it){ return srsOf(it.id).wrong > 0; })
+      .sort(function(a, b){ return srsOf(b.id).wrong - srsOf(a.id).wrong; });
+  }
+  /* Today's review: what the schedule has called for, then the shakiest of the
+     rest to fill the session up. */
   const due = dueItems();
-  const weak = course().items.filter(function(it){ const r = prog().srs[it.id]; return r && r.seen > 0 && due.indexOf(it) === -1; })
-    .sort(function(a, b){ return srsOf(a.id).box - srsOf(b.id).box; });
-  const picked = due.slice(0, 10).concat(weak.slice(0, Math.max(0, 10 - Math.min(due.length, 10))));
-  return shuffle(picked).map(function(it){ return makeExercise(it, 2, c, canHear(it, c.tts)); });
+  const weak = c.items.filter(function(it){
+    const r = p.srs[it.id];
+    return r && r.seen > 0 && due.indexOf(it) === -1;
+  }).sort(function(a, b){ return srsOf(a.id).box - srsOf(b.id).box; });
+  return due.concat(weak);
+}
+
+function buildPractice(c, mode){
+  const m = mode || "due";
+  const picked = practiceItems(m, c).slice(0, PRACTICE_SIZE);
+  return shuffle(picked).map(function(it){
+    /* The listening drill is the one set that fixes the shape of the question;
+       the others take whatever the item is ready for. */
+    return m === "listen" ? makeExercise(it, 2, c, true, "listen")
+                          : makeExercise(it, 2, c, canHear(it, c.tts));
+  });
 }
 
 /* ============================== SESSION ============================== */
@@ -1359,12 +1405,16 @@ function startLesson(lesson){
   warmSfx();
   render();
 }
-function startPractice(){
+/* `mode` also arrives as a click event from the older Review buttons, which
+   is why it is checked rather than trusted. */
+function startPractice(mode){
   const c = course();
-  const q = buildPractice(c);
+  const set = PRACTICE_SETS.filter(function(s){ return s.id === mode; })[0] || PRACTICE_SETS[0];
+  const q = buildPractice(c, set.id);
   if (!q.length) return;
   sess = {
-    mode: "practice", lesson: { title: "Spaced review", id: "practice", tint: "#248F70", deep: "#1C7058", unit: null },
+    mode: "practice", set: set.id,
+    lesson: { title: set.title, id: "practice", tint: "#248F70", deep: "#1C7058", unit: null },
     queue: q, idx: 0, hearts: Infinity, mistakes: 0, correct: 0, answered: 0, level: 2, tipShown: true,
     sel: null, used: [], picked: null, matched: [], state: "ask", lastOk: null
   };
@@ -1450,7 +1500,7 @@ function finish(){
 
 /* ============================== VIEWS ============================== */
 
-let page = "learn";        /* learn | achievements | progress */
+let page = "learn";        /* learn | practice | achievements | progress */
 let statTab = "progress";  /* progress | vocab */
 
 function render(){
@@ -1531,8 +1581,8 @@ function sideCard(){
     + ' yet. Finish one lesson and he is up studying with you.</p>';
 }
 
-const NAV = [["learn", "Learn", "school"], ["achievements", "Achievements", "emoji_events"],
-             ["progress", "Progress", "moving"]];
+const NAV = [["learn", "Learn", "school"], ["practice", "Practice", "exercise"],
+             ["achievements", "Achievements", "emoji_events"], ["progress", "Progress", "moving"]];
 
 function shell(){
   const c = course();
@@ -1545,7 +1595,8 @@ function shell(){
       + (page === n[0] ? ' aria-current="page"' : "") + '>' + ic(n[2]) + '<span>' + n[1] + '</span></button>';
   }).join("");
   const body = page === "achievements" ? pageAchievements()
-             : (page === "progress" ? pageProgress() : pageLearn());
+             : (page === "progress" ? pageProgress()
+             : (page === "practice" ? pagePractice() : pageLearn()));
 
   return '<div class="shell">'
     + '<aside class="sidebar">'
@@ -1708,6 +1759,70 @@ function pageAchievements(){
     + '</div>';
 }
 
+/* ---------- page: practice ----------
+   The lessons are a path with a next step; this is the other half, where a
+   word comes back rather than arrives. Three sets, all free: what fills them
+   is what you have already met. */
+function pagePractice(){
+  const c = course();
+  const n = {};
+  PRACTICE_SETS.forEach(function(s){ n[s.id] = practiceItems(s.id, c).length; });
+
+  /* Two different numbers, and saying so matters: `ripe` is what the schedule
+     has actually called for, while the session fills any room that is left
+     with the shakiest of the rest. A session can run on those alone. */
+  const ripe = dueItems().length;
+  const hero = '<section class="hero"><div class="hero__txt">'
+    + '<span class="eyebrow">Today&rsquo;s review</span>'
+    + '<h2>' + (ripe ? ripe + (ripe > 1 ? " words are" : " word is") + " waiting"
+                     : "Nothing is due right now") + '</h2>'
+    + '<p>' + (ripe
+        ? "Brought back at the moment they are about to slip, with your shakiest words filling the rest of the session."
+        : (n.due
+            ? "Your schedule is clear. A session will take the words you are least sure of instead."
+            : "Finish a lesson and the words you met begin coming back here, the first of them within the day."))
+    + '</p>'
+    + (n.due ? '<button class="btn btn--dark" data-practice="due">'
+               + (ripe ? "Start review" : "Review anyway") + ' '
+               + ic("arrow_forward", "ms--sm") + '</button>' : "")
+    + '</div>' + mascotImg("learning") + '</section>';
+
+  const cards = [
+    { id: "listen", tone: "mint", title: "Listen only",
+      says: "Nothing on screen but the sound. Hear the word, then choose what it means.",
+      go: "Start listening",
+      empty: courseHasAudio(c)
+        ? "Finish a lesson and the words you have met turn up here to be heard."
+        : "No " + esc(c.name) + " audio on this device, so there is nothing to listen to yet." },
+    { id: "mistakes", tone: "coral", title: "Your mistakes",
+      says: "Every word you have answered wrong, the one you have missed most often first.",
+      go: "Practise mistakes",
+      empty: "Nothing missed so far. This one fills itself as you go." }
+  ].map(function(s){
+    const count = n[s.id];
+    const meta = PRACTICE_SETS.filter(function(x){ return x.id === s.id; })[0];
+    const tally = count ? (s.id === "mistakes" ? " tally--miss" : "") : " tally--none";
+    return '<article class="card pcard">'
+      + '<div class="row" style="justify-content:space-between;align-items:flex-start">'
+      + '<div class="stat-icon ' + s.tone + '" style="margin:0">' + ic(meta.icon) + '</div>'
+      + '<span class="tally' + tally + '" aria-label="' + count + ' words">' + count + '</span></div>'
+      + '<h3>' + s.title + '</h3>'
+      + '<p>' + (count ? s.says : s.empty) + '</p>'
+      + '<button class="btn' + (count ? " btn--primary" : "") + '" data-practice="' + s.id + '"'
+      + (count ? "" : " disabled") + '>' + (count ? s.go : "Nothing yet") + '</button>'
+      + '</article>';
+  }).join("");
+
+  return '<div class="page">'
+    + '<div class="page-head"><div><div class="eyebrow">' + esc(c.name) + '</div><h1>Practice</h1>'
+    + '<p>A lesson introduces a word; practice is what makes it stay. Up to '
+    + PRACTICE_SIZE + ' words a session, no hearts at stake, 8 XP either way.</p></div></div>'
+    + hero
+    + '<div class="eyebrow" style="margin:26px 0 13px">More ways to practise</div>'
+    + '<div class="pgrid">' + cards + '</div>'
+    + '</div>';
+}
+
 /* ---------- page: progress & vocabulary ---------- */
 function pageProgress(){
   const c = course(), p = prog();
@@ -1802,7 +1917,10 @@ function wireShell(){
     if (b) b.addEventListener("click", function(){ startLesson(nextLesson()); });
   });
   const pr = document.getElementById("practice");
-  if (pr) pr.addEventListener("click", startPractice);
+  if (pr) pr.addEventListener("click", function(){ startPractice("due"); });
+  app.querySelectorAll("[data-practice]").forEach(function(b){
+    b.addEventListener("click", function(){ startPractice(b.getAttribute("data-practice")); });
+  });
   app.querySelectorAll("[data-lesson]").forEach(function(b){
     b.addEventListener("click", function(){
       const l = course().lessons.find(function(x){ return x.id === b.getAttribute("data-lesson"); });

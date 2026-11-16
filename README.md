@@ -32,6 +32,7 @@ Pages from building anything and has it copy them across as they are.
 | **Exercises** | 6 kinds: match the pairs, pick the translation in either direction, listen and transcribe, build from a word bank, and free typing |
 | **Marking** | accents and punctuation are normalised, and a one-letter typo counts as correct, with a note |
 | **Spaced repetition** | Leitner boxes at 1, 3, 7, 16 and 35 days; get one wrong and the word drops to box 2 and comes back in the same session |
+| **Practice** | a page of its own with three sets, none of them locked: today's review, a listening drill with nothing on screen but the sound, and the words you have answered wrong, the worst first. Up to 10 words a session, no hearts at stake, 8 XP |
 | **Progress** | 5 crowns per lesson, XP, a daily goal of 30 XP, a day streak and 9 achievements |
 | **Hearts** | 5 per lesson; run out and the lesson restarts |
 | **Sounds** | a recording on each answer and at the end of a lesson, one ending for a clean run and another for a run with a miss; where a browser will not play them, a pair of oscillators answers instead |
