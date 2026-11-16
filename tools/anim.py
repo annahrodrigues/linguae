@@ -26,6 +26,8 @@ import sys
 import numpy as np
 from PIL import Image, ImageSequence
 
+import mascot          # same folder: the background cut lives there
+
 
 def frames_of(path):
     im = Image.open(path)
@@ -34,6 +36,25 @@ def frames_of(path):
         out.append(f.convert("RGBA"))
         delays.append(f.info.get("duration") or im.info.get("duration") or 100)
     return out, delays
+
+
+def cut_all(frames):
+    """A GIF that arrives flattened onto the export checkerboard has no
+    transparency at all to keep, so it is reconstructed frame by frame the way
+    tools/mascot.py does the stills. Every frame is then cropped to the same
+    box -- one box for all of them, or the drawing would jump about as the
+    bounding box followed the tail from frame to frame."""
+    done = [mascot.cut_image(f)[0] for f in frames]
+    box = None
+    for f in done:
+        b = f.getbbox()
+        if not b:
+            continue
+        box = b if box is None else (min(box[0], b[0]), min(box[1], b[1]),
+                                     max(box[2], b[2]), max(box[3], b[3]))
+    if not box:
+        sys.exit("nothing survived the cut; the drawing may be too pale for those thresholds")
+    return [f.crop(box) for f in done]
 
 
 def shrink(im, width):
@@ -60,6 +81,10 @@ def build(src, dst, width, quality):
     if not frames:
         sys.exit("no frames in " + src)
     before = soft(frames[0])
+    was = frames[0].size
+    if not any(np.asarray(f)[..., 3].min() < 255 for f in frames):
+        print("  no transparency anywhere: cutting the background out first")
+        frames = cut_all(frames)
     frames = [shrink(f, width) for f in frames]
     os.makedirs(os.path.dirname(os.path.abspath(dst)), exist_ok=True)
     frames[0].save(dst, format="WEBP", save_all=True, append_images=frames[1:],
@@ -67,8 +92,7 @@ def build(src, dst, width, quality):
                    method=6, exact=False)
     print("%s -> %s" % (src, dst))
     print("  %d frames, %dms each, %dx%d (was %dx%d)"
-          % (len(frames), delays[0], frames[0].size[0], frames[0].size[1],
-             Image.open(src).size[0], Image.open(src).size[1]))
+          % (len(frames), delays[0], frames[0].size[0], frames[0].size[1], was[0], was[1]))
     print("  soft edge pixels per frame: %d -> %d" % (before, soft(frames[0])))
     print("  %d bytes (was %d)" % (os.path.getsize(dst), os.path.getsize(src)))
 

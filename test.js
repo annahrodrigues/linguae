@@ -1386,6 +1386,14 @@ test("a Review button that hands over its click still runs today's review", func
   assert.strictEqual(a.session().set, "due", "an event is not a set name");
 });
 
+test("the practice page is headed by Leon at his desk", function () {
+  const a = loadApp({ voices: [NEURAL_FR] });
+  freshSrs(a, "fr");
+  const html = a.pagePractice();
+  assert.ok(html.indexOf('src="assets/leon-practice.webp"') > -1, "the animation should be there");
+  assert.ok(html.indexOf('alt="Leon') > -1, "and it should say who it is");
+});
+
 test("the practice page counts each set and offers only what it can run", function () {
   const a = loadApp({ voices: [NEURAL_FR] });
   freshSrs(a, "fr");

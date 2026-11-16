@@ -32,7 +32,12 @@ SPECK = 25          # checker squares only joined diagonally are not real holes
 
 
 def cut(path):
-    src = Image.open(path)
+    return cut_image(Image.open(path))
+
+
+def cut_image(src):
+    """The same cut, on an image already in hand: tools/anim.py reconstructs a
+    GIF's frames with it, so there is one implementation of this and not two."""
     if src.mode in ("RGBA", "LA") or "transparency" in src.info:
         img = src.convert("RGBA")
         if np.asarray(img)[..., 3].min() < 255:
