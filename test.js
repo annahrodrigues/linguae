@@ -115,7 +115,7 @@ const EXPORTS = `
   buildLesson: buildLesson, buildPractice: buildPractice,
   practiceItems: practiceItems, pagePractice: pagePractice, PRACTICE_SETS: PRACTICE_SETS,
   startLesson: startLesson, startPractice: startPractice,
-  submit: submit, advance: advance, tapPair: tapPair,
+  submit: submit, advance: advance, tapPair: tapPair, optionIndexFor: optionIndexFor,
   hasVoiceFor: hasVoiceFor, voiceFor: voiceFor, speak: speak, choose: choose,
   AUDIO: AUDIO, clipFor: clipFor, sayItem: sayItem, canHear: canHear, FLAGS: FLAGS,
   courseHasAudio: courseHasAudio,
@@ -1080,6 +1080,17 @@ function openMatch(a) {
   assert.strictEqual(ex.kind, "match", "a vocabulary lesson opens on a match");
   return ex;
 }
+
+test("the letters shown on the options pick them, and nothing else does", function () {
+  const a = loadApp();
+  eq(["a", "b", "c", "d", "A", "D"].map(function (k) { return a.optionIndexFor(k); }),
+     [0, 1, 2, 3, 0, 3], "A to D, upper or lower");
+  /* The options are lettered on screen, so a digit is a key the page never
+     offers; it used to select one all the same. */
+  ["1", "2", "3", "4", "0", "5", "e", "z", "Enter", " ", "ArrowDown"].forEach(function (k) {
+    assert.strictEqual(a.optionIndexFor(k), -1, JSON.stringify(k) + " should pick nothing");
+  });
+});
 
 test("a mismatched pair costs a heart and marks the lesson", function () {
   const a = loadApp();
