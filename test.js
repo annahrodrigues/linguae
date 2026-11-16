@@ -116,7 +116,7 @@ const EXPORTS = `
   startLesson: startLesson, startPractice: startPractice,
   submit: submit, advance: advance, tapPair: tapPair,
   hasVoiceFor: hasVoiceFor, voiceFor: voiceFor, speak: speak, pickAudio: pickAudio,
-  AUDIO: AUDIO, clipFor: clipFor, sayItem: sayItem, canHear: canHear,
+  AUDIO: AUDIO, clipFor: clipFor, sayItem: sayItem, canHear: canHear, FLAGS: FLAGS,
   courseHasAudio: courseHasAudio,
   state: function(){ return S; },
   session: function(){ return sess; },
@@ -151,8 +151,17 @@ function loadApp(options) {
     return {
       src: "",
       currentTime: 0,
+      onerror: null,
       pause() {},
-      play() { played.push(this.src); return { catch() {} }; }
+      play() {
+        played.push(this.src);
+        /* opts.clipFails stands in for a listed clip that will not load. */
+        if (opts.clipFails) {
+          const fail = this.onerror;
+          return { catch(f) { (f || fail)(); } };
+        }
+        return { catch() {} };
+      }
     };
   };
   if (opts.voices) {
@@ -520,6 +529,80 @@ test("tapping an option reads the target language, never the English", function 
   });
 });
 
+/* ---------- what a course is taught from ---------- */
+
+test("a course says which language it is taught from", function () {
+  const a = loadApp();
+  a.LANGS.forEach(function (lg) {
+    const c = a.COURSES[lg];
+    if (lg === "en") {
+      assert.strictEqual(c.from, "Portuguese", "English is the one taught from Portuguese");
+    } else {
+      assert.strictEqual(c.from, undefined, lg + " is taught from English, which is the default");
+    }
+  });
+});
+
+test("the English course puts Portuguese on the known side", function () {
+  const a = loadApp();
+  const c = a.COURSES.en;
+  assert.strictEqual(c.tts, "en-US", "the audio is the language being learnt");
+  /* The prompt side is Portuguese, the answer side is English, and the two
+     must not be swapped — the accented words are the giveaway. */
+  const first = c.items[0];
+  assert.strictEqual(first.en, "olá");
+  assert.strictEqual(first.tgt, "hello");
+  const accented = c.items.filter(function (it) { return /[áâãàéêíóôõúç]/i.test(it.en); });
+  assert.ok(accented.length > 10, "the Portuguese side should carry its accents");
+});
+
+/* ---------- Russian, the first course with a romanisation ---------- */
+
+test("every Russian item carries a romanisation", function () {
+  const a = loadApp();
+  const items = a.COURSES.ru.items;
+  assert.strictEqual(items.length, 112);
+  items.forEach(function (it) {
+    assert.ok(it.rom && it.rom.trim(), it.id + " (" + it.en + ") has no romanisation");
+    assert.ok(/[\u0400-\u04FF]/.test(it.tgt), it.id + " is not written in Cyrillic");
+    assert.ok(!/[\u0400-\u04FF]/.test(it.rom), it.id + " has Cyrillic in its romanisation");
+  });
+});
+
+test("a Russian answer is accepted in Cyrillic or in its romanisation", function () {
+  const a = loadApp({ voices: [NEURAL_FR] });
+  a.setActive("ru");
+  a.prog().srs = {}; a.prog().crowns = {}; a.prog().xp = 0;
+  const item = a.course().items[0];
+
+  typingSession(a, item);
+  a.typeAnswer(item.tgt);
+  a.submit();
+  assert.strictEqual(a.session().lastOk, true, "the Cyrillic spelling");
+
+  typingSession(a, item);
+  a.typeAnswer(item.rom);
+  a.submit();
+  assert.strictEqual(a.session().lastOk, true, "the romanised reading: " + item.rom);
+
+  typingSession(a, item);
+  a.typeAnswer("qqqqqqqq");
+  a.submit();
+  assert.strictEqual(a.session().lastOk, false);
+});
+
+test("every course has a flag drawn for it", function () {
+  const a = loadApp();
+  a.LANGS.forEach(function (lg) {
+    const svg = a.FLAGS[lg];
+    assert.ok(svg, "no flag for " + lg);
+    assert.ok(svg.indexOf("<svg") === 0 && svg.indexOf("</svg>") > 0, lg + "'s flag is not an svg");
+    const box = (svg.match(/viewBox="0 0 (\d+(?:\.\d+)?) (\d+(?:\.\d+)?)"/) || []).slice(1);
+    assert.strictEqual(box.length, 2, lg + "'s flag has no viewBox starting at the origin");
+    assert.strictEqual(box[0], box[1], lg + "'s flag is not square: " + box.join("x"));
+  });
+});
+
 /* ---------- recorded clips ---------- */
 
 test("a clip's address is built from the item's own id", function () {
@@ -548,6 +631,18 @@ test("a clip is played in place of the voice, and only where there is one", func
   assert.strictEqual(a.played.length, 1, "no clip for this one");
   assert.strictEqual(a.spoken.length, 1, "so the voice takes it");
   assert.strictEqual(a.spoken[0].text, items[1].tgt);
+});
+
+test("a listed clip that will not load falls back to the voice", function () {
+  const a = loadApp({ voices: [NEURAL_FR], clipFails: true });
+  a.setActive("fr");
+  const item = a.course().items[0];
+  a.addClips([item.id]);
+
+  a.sayItem(item, "fr-FR");
+  assert.strictEqual(a.played.length, 1, "it still tries the clip first");
+  assert.strictEqual(a.spoken.length, 1, "and the voice picks up when the clip fails");
+  assert.strictEqual(a.spoken[0].text, item.tgt);
 });
 
 test("a clip gives a language audio even with no voice installed", function () {
@@ -907,7 +1002,7 @@ function yesterday() { return daysAgo(1); }
 
 test("every course carries the same shape", function () {
   const a = loadApp();
-  eq(a.LANGS, ["es", "fr", "de", "it", "la"]);
+  eq(a.LANGS, ["es", "fr", "de", "it", "la", "ru", "en"]);
   a.LANGS.forEach(function (lg) {
     const c = a.COURSES[lg];
     assert.strictEqual(c.units.length, 7, lg + " should have seven units");

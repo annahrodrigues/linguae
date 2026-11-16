@@ -47,12 +47,16 @@ FORMAT = "mp3"
 # ecclesiastical convention and matches what the app already asks of
 # speechSynthesis (it-IT).
 VOICES = {
+    "en": {"voice": "af_heart", "lang": "en-us", "note": "American English, the model's best-graded voice"},
     "fr": {"voice": "ff_siwis", "lang": "fr-fr", "note": ""},
     "es": {"voice": "ef_dora", "lang": "es", "note": ""},
     "it": {"voice": "if_sara", "lang": "it", "note": ""},
     "la": {"voice": "if_sara", "lang": "it", "note": "Italian voice, ecclesiastical reading"},
 }
-UNVOICED = {"de": "Kokoro v1.0 has no German voice; that course keeps the system voice"}
+UNVOICED = {
+    "de": "Kokoro v1.0 has no German voice; that course keeps the system voice",
+    "ru": "Kokoro v1.0 has no Russian voice either; same fallback",
+}
 
 
 def phrases(lang):
