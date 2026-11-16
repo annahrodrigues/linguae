@@ -316,6 +316,8 @@ main{flex:1;width:100%;max-width:1200px;margin:0 auto;padding-block:28px 64px;
 .speak .ms{font-size:24px}
 .speak--sm{width:40px;height:40px}
 .speak--sm .ms{font-size:20px}
+.speak--xs{width:34px;height:34px}
+.speak--xs .ms{font-size:18px}
 .speak--hero{width:92px;height:92px;margin:6px auto 22px;background:var(--color-primary);color:#fff;
   border-color:transparent}
 .speak--hero .ms{font-size:40px}
@@ -358,6 +360,10 @@ main{flex:1;width:100%;max-width:1200px;margin:0 auto;padding-block:28px 64px;
 .pair.gone{opacity:.3;pointer-events:none}
 .pair.bad{border-color:var(--color-coral);background:var(--color-coral-soft);animation:nudge 220ms}
 .pair .rom{display:block;font-size:12px;font-weight:500;color:var(--color-text-muted)}
+.pair-row{display:flex;align-items:center;gap:6px}
+.pair-row .pair{flex:1;min-width:0}
+.pair-row.gone{pointer-events:none}
+.pair-row.gone .speak{opacity:.3}
 @keyframes nudge{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
 .lsn__foot{transition:background var(--t)}
 .lsn__foot.is-ok{background:var(--color-primary-soft);border-top-color:transparent}
@@ -1851,10 +1857,17 @@ function bodyFor(ex, locked){
         + (sess.picked === "en:" + it.id ? " sel" : "") + '" data-side="en" data-id="' + it.id + '">'
         + esc(it.en) + '</button>';
     }).join("");
+    /* The word being learnt carries its own speaker here as everywhere else,
+       beside it rather than inside it, since a button may not nest. Joining a
+       pair is then silent: it was reading the word out on the tap that closed
+       the link, which sounded like the word repeating itself. */
     const right = shuffleStable(ex.pairs, ex.id).map(function(it){
-      return '<button class="pair' + (sess.matched.indexOf(it.id) > -1 ? " gone" : "")
+      const gone = sess.matched.indexOf(it.id) > -1;
+      const btn = '<button class="pair' + (gone ? " gone" : "")
         + (sess.picked === "tgt:" + it.id ? " sel" : "") + '" data-side="tgt" data-id="' + it.id + '">'
         + esc(it.tgt) + romOf(it) + '</button>';
+      const spk = spkBtn(it, "speak--xs");
+      return spk ? '<div class="pair-row' + (gone ? " gone" : "") + '">' + btn + spk + '</div>' : btn;
     }).join("");
     return qhead("Match the pairs", "Tap a word and its translation")
       + '<div class="pairs"><div class="col">' + left + '</div><div class="col">' + right + '</div></div>';
@@ -2030,10 +2043,6 @@ function tapPair(btn, ex){
   const side = btn.getAttribute("data-side"), id = btn.getAttribute("data-id");
   const token = side + ":" + id;
   if (sess.matched.indexOf(id) > -1) return;
-  if (side === "tgt") {
-    const tapped = course().byId[id];
-    if (tapped) sayItem(tapped, course().tts);
-  }
   if (!sess.picked) { sess.picked = token; render(); return; }
   const parts = sess.picked.split(":"), pSide = parts[0], pId = parts[1];
   if (pSide === side) { sess.picked = token; render(); return; }
@@ -2041,7 +2050,6 @@ function tapPair(btn, ex){
     sess.matched.push(id);
     sess.picked = null;
     gradeItem(id, true);
-    /* Only the target side speaks, and it did so on its own tap. */
     save();
     if (sess.matched.length === ex.pairs.length) {
       sess.correct++; sess.answered++;

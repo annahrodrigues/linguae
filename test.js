@@ -1056,21 +1056,47 @@ test("matching a pair grades it right, a mismatch grades both wrong", function (
   assert.strictEqual(a.session().state, "feedback", "the last pair closes the exercise");
 });
 
-test("a matched pair reads only its target side", function () {
-  const a = loadApp({ voices: [NEURAL_FR] });
+function openMatch(a) {
   freshSrs(a, "fr");
   const lesson = a.course().lessons.filter(function (l) { return l.kind === "w"; })[0];
   a.startLesson(lesson);
   const ex = a.session().queue[0];
-  assert.strictEqual(ex.kind, "match");
-  const id = ex.pairs[0].id;
+  assert.strictEqual(ex.kind, "match", "a vocabulary lesson opens on a match");
+  return ex;
+}
+
+test("joining a pair says nothing, whichever half is tapped first", function () {
+  const a = loadApp({ voices: [NEURAL_FR] });
+  const ex = openMatch(a);
+  a.addClips(a.course().items.map(function (it) { return it.id; }));
+  const first = ex.pairs[0].id, second = ex.pairs[1].id;
 
   a.spoken.length = 0;
-  a.tapPair(fakePair("tgt", id), ex);
-  assert.strictEqual(a.spoken.length, 1, "the French half reads itself out on a tap");
-  a.tapPair(fakePair("en", id), ex);
-  eq(a.session().matched, [id], "the pair landed");
-  assert.strictEqual(a.spoken.length, 1, "and the English half adds nothing to it");
+  a.played.length = 0;
+  a.tapPair(fakePair("tgt", first), ex);
+  a.tapPair(fakePair("en", first), ex);
+  eq(a.session().matched, [first], "the pair landed");
+
+  /* And the other way round, where the French half is the tap that closes the
+     link: that one used to read the word out, which is the repeat. */
+  a.tapPair(fakePair("en", second), ex);
+  a.tapPair(fakePair("tgt", second), ex);
+  eq(a.session().matched, [first, second]);
+
+  assert.strictEqual(a.spoken.length, 0, "a tap on a pair spoke");
+  eq(a.clipsPlayed(), [], "a tap on a pair played a recording");
+});
+
+test("every word to be learnt in a match carries its own speaker", function () {
+  const a = loadApp({ voices: [NEURAL_FR] });
+  const ex = openMatch(a);
+  const html = a.answerBox.app.innerHTML;
+  ex.pairs.forEach(function (p) {
+    assert.ok(html.indexOf('data-item="' + p.id + '"') > -1,
+      p.tgt + " has nothing to play it with");
+  });
+  /* The English half has no speaker: there is nothing to hear on that side. */
+  assert.strictEqual((html.match(/data-item=/g) || []).length, ex.pairs.length);
 });
 
 test("spaced review pays less and leaves crowns alone", function () {
