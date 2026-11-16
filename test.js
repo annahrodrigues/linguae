@@ -525,7 +525,7 @@ test("a lesson speaks the answer with the course's own voice", function () {
   });
 });
 
-test("tapping an option reads the target language, never the English", function () {
+test("a tap reads the option only where the options are in the language", function () {
   const a = loadApp({ voices: [NEURAL_FR] });
   a.setActive("fr");
   const c = a.course();
@@ -542,10 +542,14 @@ test("tapping an option reads the target language, never the English", function 
     assert.strictEqual(a.pickAudio(ex, o.id).id, o.id);
   });
 
-  /* Options in English: the French prompt is what should be heard. */
-  const asking = { kind: "pick_en", item: item, options: ex.options, answer: item.id };
-  asking.options.forEach(function (o) {
-    assert.strictEqual(a.pickAudio(asking, o.id).id, item.id, "the prompt, not the English option");
+  /* Options in English: a tap reads nothing. Playing the prompt again only
+     repeats what was just heard, and the prompt has its own speaker. */
+  ["pick_en", "listen"].forEach(function (kind) {
+    const asking = { kind: kind, item: item, options: ex.options, answer: item.id };
+    asking.options.forEach(function (o) {
+      assert.strictEqual(a.pickAudio(asking, o.id), null,
+        kind + ": an English option should not play the prompt again");
+    });
   });
 });
 

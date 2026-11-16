@@ -1864,14 +1864,13 @@ function optList(ex, locked, label, spoken){
     return spk ? '<div class="answer-row">' + btn + spk + '</div>' : btn;
   }).join("") + '</div>';
 }
-/* What a tap on an option should read out: the option itself when the options
-   are in the target language, the prompt otherwise, so the French is heard
-   either way rather than an English answer being read back. */
+/* What a tap on an option should read out: the option itself, but only where
+   the options are in the language being learnt. Where they are in English
+   there is nothing worth hearing — reading the prompt again just repeats what
+   was already played, and the prompt keeps its own speaker for that. */
 function pickAudio(ex, id){
-  if (ex.kind === "pick_tgt") {
-    return ex.options.filter(function(o){ return o.id === id; })[0] || null;
-  }
-  return ex.item || null;
+  if (ex.kind !== "pick_tgt") return null;
+  return ex.options.filter(function(o){ return o.id === id; })[0] || null;
 }
 
 function optCls(id, ex, locked){
