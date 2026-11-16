@@ -941,6 +941,13 @@ function learnedCount(){
   const p = prog();
   return course().items.filter(function(it){ const r = p.srs[it.id]; return r && r.box >= 3; }).length;
 }
+/* "Started" is anything the learner has actually done in this course, not just
+   a crown: a first lesson that ran out of hearts still leaves XP behind and
+   words in the schedule. */
+function courseStarted(){
+  const p = prog();
+  return p.xp > 0 || lessonsStarted() > 0 || Object.keys(p.srs).length > 0;
+}
 function lessonsStarted(){
   return course().lessons.filter(function(l){ return crownsOf(l.id) > 0; }).length;
 }
@@ -1300,6 +1307,21 @@ function wirePicker(){
 }
 
 /* ---------- shell ---------- */
+
+/* Leon studies alongside a course that is under way, and sleeps through one
+   that has not begun — where the card says so, and says what wakes him. */
+function sideCard(){
+  if (courseStarted()) {
+    return '<img src="assets/leon-study.webp" alt="Leon, the Linguae chameleon, reading">'
+      + '<strong>Leon</strong>'
+      + '<p>Learn at your own pace. Small steps, steady progress.</p>';
+  }
+  return mascotImg("resting")
+    + '<strong>Leon is still napping</strong>'
+    + '<p>You have not started ' + esc(course().name)
+    + ' yet. Finish one lesson and he is up studying with you.</p>';
+}
+
 const NAV = [["learn", "Learn", "school"], ["achievements", "Achievements", "emoji_events"],
              ["progress", "Progress", "moving"]];
 
@@ -1320,8 +1342,7 @@ function shell(){
     + '<aside class="sidebar">'
     + '<div class="brand">' + logo() + '</div>'
     + '<div class="nav-label eyebrow">Explore</div><nav aria-label="Main">' + nav + '</nav>'
-    + '<div class="side-card">' + mascotImg("resting", 104)
-    + '<strong>Leon</strong><p>Learn at your own pace. Small steps, steady progress.</p></div>'
+    + '<div class="side-card">' + sideCard() + '</div>'
     + '</aside>'
     + '<div class="main-wrap">'
     + '<header class="topbar">'
