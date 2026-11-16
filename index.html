@@ -1182,7 +1182,7 @@ function sfxEl(name){
 /* Fetching starts when the element is made, so a lesson warms them up rather
    than meeting the first one cold. */
 function warmSfx(){
-  ["correct_answer", "incorrect_answer", "finished_correct", "finished_incorrect"]
+  ["correct_answer", "incorrect_answer", "finished_correct", "finished_mid", "finished_incorrect"]
     .forEach(sfxEl);
 }
 
@@ -1480,9 +1480,18 @@ function advance(){
   render();
 }
 
+/* Three endings, not two. A lesson with a slip or two used to close on the
+   same sound as one that went badly, which reads as a harsher verdict than
+   the lesson deserved. Up to MISTAKES_FORGIVEN misses get the middle one. */
+const MISTAKES_FORGIVEN = 3;
+function endingFor(mistakes){
+  if (!mistakes) return "finished_correct";
+  return mistakes <= MISTAKES_FORGIVEN ? "finished_mid" : "finished_incorrect";
+}
+
 function finish(){
   const perfect = sess.mistakes === 0;
-  playSfx(perfect ? "finished_correct" : "finished_incorrect");
+  playSfx(endingFor(sess.mistakes));
   const gained = sess.mode === "practice" ? 8 : (10 + (perfect ? 5 : 0));
   addXp(gained);
   touchStreak();

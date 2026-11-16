@@ -35,7 +35,7 @@ Pages from building anything and has it copy them across as they are.
 | **Practice** | a page of its own with three sets, none of them locked: today's review, a listening drill with nothing on screen but the sound, and the words you have answered wrong, the worst first. Up to 10 words a session, no hearts at stake, 8 XP |
 | **Progress** | 5 crowns per lesson, XP, a daily goal of 30 XP, a day streak and 9 achievements |
 | **Hearts** | 5 per lesson; run out and the lesson restarts |
-| **Sounds** | a recording on each answer and at the end of a lesson, one ending for a clean run and another for a run with a miss; where a browser will not play them, a pair of oscillators answers instead |
+| **Sounds** | a recording on each answer, and three for the end of a lesson: a clean run, a run with up to three misses, and one with more; where a browser will not play them, a pair of oscillators answers instead |
 | **Audio** | a recorded clip when the repository has one, otherwise the browser's `speechSynthesis` at the natural rate, on the best voice the system offers — a neural or Google voice over a legacy one; with neither, that word goes quiet rather than be read in another language's accent |
 | **Accessibility** | every pair of text colours clears AA contrast (4.5:1) in both themes |
 

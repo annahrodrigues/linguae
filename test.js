@@ -116,6 +116,7 @@ const EXPORTS = `
   practiceItems: practiceItems, pagePractice: pagePractice, PRACTICE_SETS: PRACTICE_SETS,
   startLesson: startLesson, startPractice: startPractice,
   submit: submit, advance: advance, tapPair: tapPair, optionIndexFor: optionIndexFor,
+  endingFor: endingFor,
   hasVoiceFor: hasVoiceFor, voiceFor: voiceFor, speak: speak, choose: choose,
   AUDIO: AUDIO, clipFor: clipFor, sayItem: sayItem, canHear: canHear, FLAGS: FLAGS,
   courseHasAudio: courseHasAudio,
@@ -826,24 +827,59 @@ test("with no Audio element at all, the oscillators still answer", function () {
   assert.strictEqual(a.played.length, 0, "and nothing was handed to an element");
 });
 
-test("finishing a lesson sounds, and says whether it was clean", function () {
+test("the ending depends on how much was missed, not on whether anything was", function () {
+  const a = loadApp();
+  /* Three is written out rather than read from the app: a test that borrows
+     the line it is checking agrees with wherever the line happens to be. */
+  assert.strictEqual(a.endingFor(0), "finished_correct");
+  [1, 2, 3].forEach(function (m) {
+    assert.strictEqual(a.endingFor(m), "finished_mid", m + " missed is still a good run");
+  });
+  [4, 5, 7, 20].forEach(function (m) {
+    assert.strictEqual(a.endingFor(m), "finished_incorrect", m + " missed is not");
+  });
+});
+
+test("finishing a lesson sounds, and says how it went", function () {
   const a = loadApp({ voices: [NEURAL_FR] });
 
   freshSrs(a, "fr");
   a.played.length = 0;
   const clean = playLesson(a);
   assert.strictEqual(clean.session.mistakes, 0);
-  assert.ok(a.sfxPlayed().indexOf("assets/sfx/finished_correct.opus") > -1,
-    "a clean lesson should end on the clean sound");
-  assert.strictEqual(a.sfxPlayed().indexOf("assets/sfx/finished_incorrect.opus"), -1);
+  eq(a.sfxPlayed().filter(function (u) { return u.indexOf("finished") > -1; }),
+     ["assets/sfx/finished_correct.opus"], "a clean lesson ends on the clean sound");
 
+  /* One slip is not a bad lesson, and used to sound like one. */
   freshSrs(a, "fr");
   a.played.length = 0;
-  const messy = playLesson(a, { wrongAt: 1 });
-  assert.ok(messy.session.mistakes > 0);
-  assert.ok(a.sfxPlayed().indexOf("assets/sfx/finished_incorrect.opus") > -1,
-    "a lesson with a miss should end on the other one");
-  assert.strictEqual(a.sfxPlayed().indexOf("assets/sfx/finished_correct.opus"), -1);
+  const slip = playLesson(a, { wrongAt: 1 });
+  assert.strictEqual(slip.session.mistakes, 1);
+  eq(a.sfxPlayed().filter(function (u) { return u.indexOf("finished") > -1; }),
+     ["assets/sfx/finished_mid.opus"], "one miss ends in the middle");
+});
+
+test("a run with more misses than are forgiven ends on the low sound", function () {
+  const a = loadApp({ voices: [NEURAL_FR] });
+  freshSrs(a, "fr");
+  playLesson(a);
+  /* Practice, where hearts are not at stake, is the only place a session can
+     take more than four misses and still reach the end. */
+  Object.keys(a.prog().srs).forEach(function (id) { a.prog().srs[id].due = Date.now() - 1000; });
+  a.played.length = 0;
+  a.startPractice("due");
+  /* A miss sends the word back to the end of the queue, so a session answered
+     wrong all the way through never finishes. Five, then the rest right. */
+  let guard = 0, missed = 0;
+  while (a.session().state !== "done") {
+    if (guard++ > 200) throw new Error("the review never ended");
+    answerCurrent(a, missed >= 5);
+    if (missed < 5) missed++;
+    a.advance();
+  }
+  assert.strictEqual(a.session().mistakes, 5, "more misses than are forgiven");
+  eq(a.sfxPlayed().filter(function (u) { return u.indexOf("finished") > -1; }),
+     ["assets/sfx/finished_incorrect.opus"]);
 });
 
 test("a lesson still runs where the browser has neither sound", function () {
@@ -891,7 +927,9 @@ function playLesson(a, opts) {
   while (a.session() && a.session().state !== "done" && a.session().state !== "dead") {
     if (guard++ > 200) throw new Error("the session never ended");
     const n = a.session().answered;
-    answerCurrent(a, o.wrongAt === undefined ? true : n !== o.wrongAt);
+    const miss = (o.wrongAt !== undefined && n === o.wrongAt)
+              || (o.wrongWhile !== undefined && n < o.wrongWhile);
+    answerCurrent(a, !miss);
     if (a.session().state === "dead") break;
     a.advance();
   }

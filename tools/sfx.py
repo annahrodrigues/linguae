@@ -40,6 +40,7 @@ SOUNDS = {
     "correct_answer":    {"keep": 1.05, "fade": 0.16, "mono": True,  "peak": 0.58},
     "incorrect_answer":  {"keep": 0.95, "fade": 0.13, "mono": True,  "peak": 0.62},
     "finished_correct":  {"keep": None, "fade": 0.25, "mono": False, "peak": 0.92},
+    "finished_mid":      {"keep": None, "fade": 0.25, "mono": False, "peak": 0.92},
     "finished_incorrect": {"keep": None, "fade": 0.25, "mono": False, "peak": 0.92},
 }
 QUIET = 0.004      # below this fraction of the peak counts as silence
