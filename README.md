@@ -121,6 +121,8 @@ both kept in this repository for reference:
 - Colours, type (Outfit and DM Sans) and components come from the kit's `src/styles.css`
 - The symbol is the vector *Hidden Chameleon L* monogram (`linguae-monogram.svg`)
 - Leon's expressions come from the visual identity kit, shrunk down for the web
+- Each unit can carry its own illustration at `assets/unit-<unit id>.png`, listed
+  in `UNIT_ART`; a unit without one just shows no picture
 - Brand green `#248F70` is the reference; in the interface text uses `#1D7A5F`,
   the same green darkened just enough to clear AA
 

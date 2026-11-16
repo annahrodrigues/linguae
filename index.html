@@ -424,6 +424,10 @@ main{flex:1;width:100%;max-width:1200px;margin:0 auto;padding-block:28px 64px;
   padding:14px 18px;box-shadow:var(--shadow-soft)}
 .unitbar small{display:block;font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
   opacity:.9}
+/* The unit's own illustration, standing out of the bar like a sticker rather
+   than shrunk into it; it is only drawn for units that have art. */
+.unit-art{flex:none;width:66px;height:66px;object-fit:contain;object-position:bottom;
+  align-self:flex-end;margin:-18px -4px -14px 0}
 .unitbar h3{font-size:19px;color:#fff}
 .unitbar .ghost{margin-left:auto;flex:none;display:inline-flex;align-items:center;gap:7px;cursor:pointer;
   background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.4);color:#fff;border-radius:11px;
@@ -457,6 +461,11 @@ main{flex:1;width:100%;max-width:1200px;margin:0 auto;padding-block:28px 64px;
   .unitbar{top:calc(env(safe-area-inset-top,0px) + 70px);padding:12px 14px}
   .unitbar h3{font-size:17px}
   .unitbar .ghost{padding:8px 10px;font-size:11.5px}
+  /* The art, the title and the note button share one line on a phone, and
+     "Food & travel" is the one that has to fit. */
+  .unitbar{gap:10px;padding:12px 14px}
+  .unitbar h3{font-size:16.5px}
+  .unit-art{width:52px;height:52px;margin:-14px -2px -10px 0}
 }
 
 /* ---------- responsive ---------- */
@@ -497,6 +506,10 @@ main{flex:1;width:100%;max-width:1200px;margin:0 auto;padding-block:28px 64px;
   .counters{gap:12px}
 }
 @media (max-width:360px){
+  /* On the narrowest phones the unit title needs the room more than the
+     button's label does; the icon and its aria-label carry it. */
+  .ghost__txt{display:none}
+  .unitbar .ghost{padding:8px}
   /* The flag already says which course this is. */
   .pill__name{display:none}
   .pill{padding:7px 9px}
@@ -1334,6 +1347,14 @@ function shell(){
 /* ---------- page: learn ---------- */
 const openNotes = {};
 
+/* One illustration per unit, keyed by unit id. Units without one simply show
+   no picture, so the set can be filled in a unit at a time. */
+const UNIT_ART = { u1: "assets/unit-u1.png", u2: "assets/unit-u2.png", u3: "assets/unit-u3.png" };
+function unitArt(u){
+  if (!UNIT_ART[u.id]) return "";
+  return '<img class="unit-art" src="' + UNIT_ART[u.id] + '" alt="" aria-hidden="true" loading="lazy">';
+}
+
 function pageLearn(){
   const c = course(), p = prog();
   const due = dueItems().length;
@@ -1365,9 +1386,11 @@ function pageLearn(){
     const noteId = c.id + "-" + u.id;
     const noteOpen = !!openNotes[noteId];
     return '<section class="unit">'
-      + '<div class="unitbar"><div><small>' + u.caption + '</small><h3>' + esc(u.title) + '</h3></div>'
-      + '<button class="ghost" data-note="' + noteId + '" aria-expanded="' + noteOpen + '">'
-      + ic("menu_book", "ms--sm") + 'Grammar note</button></div>'
+      + '<div class="unitbar">' + unitArt(u)
+      + '<div><small>' + u.caption + '</small><h3>' + esc(u.title) + '</h3></div>'
+      + '<button class="ghost" data-note="' + noteId + '" aria-expanded="' + noteOpen
+      + '" aria-label="Grammar note" title="Grammar note">'
+      + ic("menu_book", "ms--sm") + '<span class="ghost__txt">Grammar note</span></button></div>'
       + (noteOpen ? '<div class="note"><em>' + esc(u.title) + '</em>' + u.tip + '</div>' : "")
       + '<div class="trail">' + nodes
       + '<div class="node node--trophy' + (cleared ? " on" : "") + '" style="--k:0">'
