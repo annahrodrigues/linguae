@@ -24,13 +24,13 @@
   --color-primary-ink:#1D7A5F; --color-primary-soft:#E5F1E8;
   --color-accent:#F2B85B; --color-accent-ink:#8A6730; --color-accent-soft:#FBEFD8;
   --color-coral:#F28B75; --color-coral-ink:#9F594A; --color-coral-soft:#FDEAE4;
-  --color-forest:#253D36;
+  --color-cta:#253D36; --color-cta-ink:#FFFFFF;
   --color-background:#F8F7F0; --color-surface:#FFFFFF; --color-surface-soft:#F5EBCB;
   --color-raise:#F7F9F5;
   --color-text:#253D36; --color-text-muted:#616D67; --color-border:#E7E9E2;
   --tile-mint:#E4F4E9; --tile-gold:#FFF0D1; --tile-coral:#FFEBE6;
-  --hero-from:#E1F0E3; --hero-to:#F5EBCB;
-  --medal-from:#FFEDC2; --medal-to:#F2B85B; --medal-ring:#FFF6DF; --medal-ink:#6E4A10;
+  --hero-from:#E8F4EA; --hero-to:#F9F1DA;
+  --medal-from:#FFEDC2; --medal-to:#F2B85B; --medal-ring:#FFF6DF; --medal-ink:#684410;
   --font-heading:'Outfit','Segoe UI',system-ui,sans-serif;
   --font-body:'DM Sans','Segoe UI',system-ui,sans-serif;
   --radius-card:16px; --radius-button:12px; --radius-input:10px;
@@ -38,34 +38,42 @@
   --shadow-lift:0 2px 4px rgba(37,61,54,.07),0 10px 26px rgba(37,61,54,.08);
   --t:180ms cubic-bezier(.2,.7,.3,1);
 }
+/* Dark is not the light theme with the lights off: the brand's warm cream and
+   golden yellow carry the surfaces and the text, and green stays where it
+   means something — the primary button, a right answer, progress. The two
+   blocks below are the same palette twice, once for the system setting and
+   once for data-theme="dark"; a test holds them to that and checks every pair
+   of text and background against AA. */
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --color-primary:#1D7A5F; --color-primary-dark:#17634E; --color-primary-light:#A8DDBB;
-  --color-primary-ink:#A8DDBB; --color-primary-soft:#2A4238;
-  --color-accent:#F2B85B; --color-accent-ink:#F2B85B; --color-accent-soft:#3A2F1A;
-  --color-coral:#F28B75; --color-coral-ink:#F28B75; --color-coral-soft:#3C261F;
-  --color-background:#1A2A24; --color-surface:#253D36; --color-surface-soft:#302A1E;
-  --color-raise:#2A4238;
-  --color-text:#EAF2EC; --color-text-muted:#9FB3A8; --color-border:#334A41;
-  --tile-mint:#1E3A30; --tile-gold:#3A2F1A; --tile-coral:#3C261F;
-  --hero-from:#20332B; --hero-to:#332C1E;
+  --color-primary-ink:#9FD9B4; --color-primary-soft:#2E3A2B;
+  --color-accent:#F2B85B; --color-accent-ink:#F7C871; --color-accent-soft:#3A2F1A;
+  --color-coral:#F28B75; --color-coral-ink:#F2A190; --color-coral-soft:#3B271F;
+  --color-cta:#F2B85B; --color-cta-ink:#2A1D05;
+  --color-background:#1C1813; --color-surface:#262117; --color-surface-soft:#332B1C;
+  --color-raise:#2E2819;
+  --color-text:#F6EFDE; --color-text-muted:#BFB198; --color-border:#3D3527;
+  --tile-mint:#23362B; --tile-gold:#3C3119; --tile-coral:#3B271F;
+  --hero-from:#243029; --hero-to:#3A2F1A;
   --medal-from:#6B4F16; --medal-to:#F2B85B; --medal-ring:#4A3A14; --medal-ink:#2A1D05;
-  --shadow-soft:0 1px 2px rgba(0,0,0,.28),0 6px 18px rgba(0,0,0,.22);
-  --shadow-lift:0 2px 6px rgba(0,0,0,.32),0 12px 28px rgba(0,0,0,.26);
+  --shadow-soft:0 1px 2px rgba(0,0,0,.34),0 6px 18px rgba(0,0,0,.26);
+  --shadow-lift:0 2px 6px rgba(0,0,0,.38),0 12px 28px rgba(0,0,0,.3);
   color-scheme:dark;
 }}
 :root[data-theme="dark"]{
   --color-primary:#1D7A5F; --color-primary-dark:#17634E; --color-primary-light:#A8DDBB;
-  --color-primary-ink:#A8DDBB; --color-primary-soft:#2A4238;
-  --color-accent:#F2B85B; --color-accent-ink:#F2B85B; --color-accent-soft:#3A2F1A;
-  --color-coral:#F28B75; --color-coral-ink:#F28B75; --color-coral-soft:#3C261F;
-  --color-background:#1A2A24; --color-surface:#253D36; --color-surface-soft:#302A1E;
-  --color-raise:#2A4238;
-  --color-text:#EAF2EC; --color-text-muted:#9FB3A8; --color-border:#334A41;
-  --tile-mint:#1E3A30; --tile-gold:#3A2F1A; --tile-coral:#3C261F;
-  --hero-from:#20332B; --hero-to:#332C1E;
+  --color-primary-ink:#9FD9B4; --color-primary-soft:#2E3A2B;
+  --color-accent:#F2B85B; --color-accent-ink:#F7C871; --color-accent-soft:#3A2F1A;
+  --color-coral:#F28B75; --color-coral-ink:#F2A190; --color-coral-soft:#3B271F;
+  --color-cta:#F2B85B; --color-cta-ink:#2A1D05;
+  --color-background:#1C1813; --color-surface:#262117; --color-surface-soft:#332B1C;
+  --color-raise:#2E2819;
+  --color-text:#F6EFDE; --color-text-muted:#BFB198; --color-border:#3D3527;
+  --tile-mint:#23362B; --tile-gold:#3C3119; --tile-coral:#3B271F;
+  --hero-from:#243029; --hero-to:#3A2F1A;
   --medal-from:#6B4F16; --medal-to:#F2B85B; --medal-ring:#4A3A14; --medal-ink:#2A1D05;
-  --shadow-soft:0 1px 2px rgba(0,0,0,.28),0 6px 18px rgba(0,0,0,.22);
-  --shadow-lift:0 2px 6px rgba(0,0,0,.32),0 12px 28px rgba(0,0,0,.26);
+  --shadow-soft:0 1px 2px rgba(0,0,0,.34),0 6px 18px rgba(0,0,0,.26);
+  --shadow-lift:0 2px 6px rgba(0,0,0,.38),0 12px 28px rgba(0,0,0,.3);
   color-scheme:dark;
 }
 *{box-sizing:border-box}
@@ -106,7 +114,7 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .btn:active:not(:disabled){transform:translateY(0)}
 .btn--primary{background:var(--color-primary);color:#fff}
 .btn--primary:hover:not(:disabled){background:var(--color-primary-dark)}
-.btn--dark{background:var(--color-forest);color:#fff}
+.btn--dark{background:var(--color-cta);color:var(--color-cta-ink)}
 .btn--outline{background:transparent;border-color:var(--color-primary-ink);color:var(--color-primary-ink)}
 .btn--quiet{background:transparent;border-color:var(--color-border);color:var(--color-text-muted)}
 .btn--coral{background:var(--color-coral);color:#2A1710}

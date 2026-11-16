@@ -1221,6 +1221,98 @@ test("spaced review pays less and leaves crowns alone", function () {
   assert.strictEqual(a.crownsOf(lesson.id), crowns, "review earns no crown");
 });
 
+/* ---------- colour ----------
+   The page promises AA contrast in both themes, and the dark palette is
+   written out twice — once for the system setting, once for data-theme. Both
+   are things a person cannot see going wrong until someone cannot read it. */
+
+function themeTokens() {
+  const css = fs.readFileSync(PAGE, "utf8");
+  const grab = function (opener) {
+    const i = css.indexOf(opener);
+    assert.ok(i > -1, "no token block for " + opener);
+    const body = css.slice(i + opener.length, css.indexOf("}", i));
+    const out = {};
+    let m;
+    const re = /--([a-z-]+)\s*:\s*(#[0-9A-Fa-f]{6})/g;
+    while ((m = re.exec(body))) out[m[1]] = m[2].toUpperCase();
+    return out;
+  };
+  return {
+    light: grab(":root{"),
+    system: grab('@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){'),
+    forced: grab(':root[data-theme="dark"]{')
+  };
+}
+
+function contrast(a, b) {
+  const chan = function (c) {
+    const v = c / 255;
+    return v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+  };
+  const lum = function (hex) {
+    const n = parseInt(hex.slice(1), 16);
+    return 0.2126 * chan((n >> 16) & 255) + 0.7152 * chan((n >> 8) & 255) + 0.0722 * chan(n & 255);
+  };
+  const x = lum(a), y = lum(b);
+  return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
+}
+
+/* Written out rather than read off the stylesheet: this is the list of places
+   text sits on a colour, and a test that derived it would drift with it. */
+const ON = [
+  ["color-text", "color-background"], ["color-text", "color-surface"],
+  ["color-text", "color-surface-soft"], ["color-text", "color-raise"],
+  ["color-text", "hero-from"], ["color-text", "hero-to"],
+  ["color-text", "color-primary-soft"],
+  ["color-text-muted", "color-background"], ["color-text-muted", "color-surface"],
+  ["color-text-muted", "color-raise"], ["color-text-muted", "hero-from"],
+  ["color-primary-ink", "color-surface"], ["color-primary-ink", "color-background"],
+  ["color-primary-ink", "color-primary-soft"], ["color-primary-ink", "tile-mint"],
+  ["color-primary-ink", "hero-from"], ["color-primary-ink", "hero-to"],
+  ["color-accent-ink", "color-surface"], ["color-accent-ink", "tile-gold"],
+  ["color-coral-ink", "color-surface"], ["color-coral-ink", "tile-coral"],
+  ["color-cta-ink", "color-cta"], ["medal-ink", "medal-to"]
+];
+
+test("every pair of text and background clears AA, in both themes", function () {
+  const themes = themeTokens();
+  [["light", themes.light], ["dark", themes.forced]].forEach(function (pair) {
+    const name = pair[0], t = pair[1];
+    ON.forEach(function (on) {
+      const ink = t[on[0]] || themes.light[on[0]];
+      const bg = t[on[1]] || themes.light[on[1]];
+      assert.ok(ink && bg, name + ": no value for " + on[0] + " or " + on[1]);
+      const r = contrast(ink, bg);
+      assert.ok(r >= 4.5, name + ": " + on[0] + " on " + on[1]
+        + " is " + r.toFixed(2) + ":1, under the 4.5 AA asks for");
+    });
+    /* A filled primary button is white on the brand green in both themes. */
+    const onGreen = contrast("#FFFFFF", t["color-primary"] || themes.light["color-primary"]);
+    assert.ok(onGreen >= 4.5, name + ": white on the primary is " + onGreen.toFixed(2) + ":1");
+  });
+});
+
+test("the dark palette is one palette, not two that drifted", function () {
+  const themes = themeTokens();
+  eq(themes.forced, themes.system,
+     "the system block and the data-theme block must hold the same colours");
+});
+
+test("dark is not the light theme with the lights off", function () {
+  const themes = themeTokens();
+  const warmer = function (hex) {
+    const n = parseInt(hex.slice(1), 16);
+    return ((n >> 16) & 255) - (n & 255);   /* red over blue: how warm it reads */
+  };
+  ["color-background", "color-surface", "color-text"].forEach(function (k) {
+    assert.ok(warmer(themes.forced[k]) > 0,
+      k + " is " + themes.forced[k] + ", which is not a warm colour");
+  });
+  assert.notStrictEqual(themes.forced["color-cta"], themes.light["color-cta"],
+    "the dark call to action should not be the light one");
+});
+
 /* ---------- the three practice sets ---------- */
 
 test("the mistakes set holds only what was missed, the worst of it first", function () {

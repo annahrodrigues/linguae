@@ -37,7 +37,7 @@ Pages from building anything and has it copy them across as they are.
 | **Hearts** | 5 per lesson; run out and the lesson restarts |
 | **Sounds** | a recording on each answer, and three for the end of a lesson: a clean run, a run with up to three misses, and one with more; where a browser will not play them, a pair of oscillators answers instead |
 | **Audio** | a recorded clip when the repository has one, otherwise the browser's `speechSynthesis` at the natural rate, on the best voice the system offers — a neural or Google voice over a legacy one; with neither, that word goes quiet rather than be read in another language's accent |
-| **Accessibility** | every pair of text colours clears AA contrast (4.5:1) in both themes |
+| **Accessibility** | every pair of text colours clears AA contrast (4.5:1) in both themes, checked by a test that reads the stylesheet |
 
 Progress lives in `localStorage`, one record per course, under the key
 `lingua-trail-v1`. There is no account, no backend and no network call — closing
@@ -137,6 +137,9 @@ both kept in this repository for reference:
   staircase, and shrinking the frames with the colour premultiplied softens them
 - Brand green `#248F70` is the reference; in the interface text uses `#1D7A5F`,
   the same green darkened just enough to clear AA
+- The dark theme is warm rather than green: the brand's cream and golden yellow
+  carry the surfaces, the text and the call to action, and green stays where it
+  means something — the primary button, a right answer, progress
 
 The five course tiles carry flags, drawn as inline SVG rather than emoji —
 Windows has no glyphs for the regional-indicator pairs and falls back to the two
