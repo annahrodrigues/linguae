@@ -37,12 +37,15 @@ function makeDb() {
 }
 
 const CODE = "abcd-1234-wxyz";
-const call = (db, method, path, body) =>
+/* The rate limiter, which lets everything through unless a test says not to. */
+const allow = (yes) => ({ limit: async () => ({ success: yes !== false }) });
+
+const call = (db, method, path, body, limiter) =>
   worker.fetch(new Request("https://sync.example" + path, {
     method: method,
     headers: body === undefined ? {} : { "content-type": "application/json" },
     body: body === undefined ? undefined : body
-  }), { DB: db });
+  }), { DB: db, LIMIT: limiter || allow(true) });
 
 const results = [];
 async function test(name, fn) {
@@ -154,6 +157,18 @@ await test("every answer carries the headers a page needs to read it", async () 
     assert.strictEqual(r.headers.get("cache-control"), "no-store",
       "a cached answer would hand back progress that has already moved on");
   }
+});
+
+await test("a flood is turned away before it reaches the table", async () => {
+  const db = makeDb();
+  /* The address of this worker is in the page, so anyone can reach it. Nobody
+     can reach a code they do not have, but they could write under codes of
+     their own until the day's quota is gone. */
+  const r = await call(db, "PUT", "/v1/" + CODE, JSON.stringify({ state: {} }), allow(false));
+  assert.strictEqual(r.status, 429);
+  assert.strictEqual(db.rows.size, 0, "and nothing was written");
+  assert.strictEqual((await call(db, "GET", "/v1/" + CODE, undefined, allow(false))).status, 429,
+    "reading is counted too, or a scan would be free");
 });
 
 await test("anything that is not the one path is nothing", async () => {

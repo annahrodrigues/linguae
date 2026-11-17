@@ -2102,9 +2102,21 @@ atest("finishing a lesson carries it across by itself", async function () {
   assert.ok(server.slots[SYNC.code].courses.fr.xp > 0, "with the XP it earned");
 });
 
+test("a device already knows where to sync, so it only ever asks for the code", function () {
+  const a = loadApp({ server: {} });
+  freshSrs(a, "fr");
+  /* The address of the deployed worker is in the page. Without it every
+     device would have to be told where to look, which is a second thing to
+     carry across and the one nobody would remember. */
+  assert.ok(/^https:\/\/\S+$/.test(a.syncState().url), "a device starts out knowing the address");
+  assert.strictEqual(a.syncCard().indexOf('id="syncurl"'), -1, "so it does not ask for one");
+});
+
 test("the panel asks for one thing at a time", function () {
   const a = loadApp({ server: {} });
   freshSrs(a, "fr");
+  /* Cleared, which is how a device is pointed at someone else's server. */
+  a.setSync({ url: "" });
   let html = a.syncCard();
   assert.ok(html.indexOf('id="syncurl"') > -1, "with nowhere to sync, it wants the address");
   assert.strictEqual(html.indexOf('id="syncnew"'), -1, "and nothing else yet");
@@ -2125,13 +2137,13 @@ test("a device that has never been used offers the panel at the front door", fun
   const fresh = loadApp({ server: {} });
   /* The panel otherwise sits behind a course, and someone arriving on their
      phone has already chosen one -- over on the other device. */
-  assert.ok(fresh.viewPicker().indexOf('id="syncurl"') > -1,
+  assert.ok(fresh.viewPicker().indexOf('id="synccode"') > -1,
     "a new device should be able to type its code before anything else");
 
   const used = loadApp({ server: {} });
   freshSrs(used, "fr");
   used.touchStreak();
-  assert.strictEqual(used.viewPicker().indexOf('id="syncurl"'), -1,
+  assert.strictEqual(used.viewPicker().indexOf('id="synccode"'), -1,
     "but swapping courses later is not the moment to talk about devices");
 });
 

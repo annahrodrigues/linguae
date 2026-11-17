@@ -904,9 +904,11 @@ function touchStreak(){
    sets one up. Until an address is saved here, none of this does anything. */
 
 const SYNC_KEY = "lingua-sync-v1";
-/* Filled in once the worker is deployed, so a new device needs only the code.
-   Empty, and the panel asks for the address first. */
-const SYNC_HOME = "";
+/* The worker in sync/, deployed. Here rather than typed into every device, so
+   a new one needs only the code -- and anyone running their own copy of
+   Linguae changes this one line. Clear it and the panel asks for an address
+   first, which is also how a device points at a different server. */
+const SYNC_HOME = "https://linguae-sync.linguae-sync.workers.dev";
 
 let sync = loadSync();
 function loadSync(){

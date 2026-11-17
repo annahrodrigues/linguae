@@ -9,6 +9,11 @@
  * one row -- which is the whole of the lock, and is said plainly in the app.
  * There is no account to break into because there is no account.
  *
+ * The address is in the page, so anyone can reach this. Nobody can reach a
+ * code they do not have, but they could write junk under codes of their own
+ * and fill the free quota, so every request is counted against its address
+ * first. A person syncing two devices sends a handful a day.
+ *
  * Deployed on Cloudflare's free plan, where it costs nothing and, unlike a
  * free database elsewhere, is not paused for going a week unused.
  * sync/README.md has the five commands.
@@ -49,6 +54,17 @@ export default {
 
     const code = at[1].toLowerCase();
     if (!CODE.test(code)) return reply({ error: "bad code" }, 400);
+
+    /* Counted per address, not per code: a flood would use a fresh code every
+       time, which is exactly what counting by code would miss. The number is
+       in wrangler.toml, and is not a copy of it here where the two could
+       drift apart -- 20 a minute, where two devices send about two and a
+       flood was measured being turned away after 25. Cloudflare counts this
+       loosely on purpose, so a limit set at what one person needs would let a
+       burst through before it noticed. */
+    const who = request.headers.get("cf-connecting-ip") || "unknown";
+    const allowed = await env.LIMIT.limit({ key: who });
+    if (!allowed.success) return reply({ error: "too many requests" }, 429);
 
     if (request.method === "GET") {
       const row = await env.DB.prepare("SELECT blob, at FROM slots WHERE code = ?")

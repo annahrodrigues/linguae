@@ -39,7 +39,7 @@ Pages from building anything and has it copy them across as they are.
 | **Audio** | a recorded clip when the repository has one, otherwise the browser's `speechSynthesis` at the natural rate, on the best voice the system offers — a neural or Google voice over a legacy one; with neither, that word goes quiet rather than be read in another language's accent |
 | **Pronunciation** | the browser's own `SpeechRecognition` listens and the phrase is marked word by word; seven words in ten passes. See the note below on what this can and cannot tell you |
 | **Accessibility** | every pair of text colours clears AA contrast (4.5:1) in both themes, checked by a test that reads the stylesheet |
-| **More than one device** | optional, off until you set it up: a code made on one device and typed on the other, and the two histories are merged rather than one overwriting the other. `sync/` holds the forty-line server it needs |
+| **More than one device** | a code made on one device and typed on the other, and the two histories are merged rather than one overwriting the other. `sync/` holds the small Cloudflare Worker behind it, already deployed |
 
 Progress lives in `localStorage`, one record per course, under the key
 `lingua-trail-v1`. There is no account and nothing is required of the network:
@@ -60,8 +60,11 @@ week adds what it learnt instead of flattening the laptop:
   which is when it was really earned
 - which course is open belongs to the device in your hand
 
-`sync/README.md` sets the server up in five commands. There is no account and no
-password: the code is the key to the stored copy, which the panel says plainly.
+The server is deployed and the app already knows its address, so a device is
+only ever asked for the code; `sync/README.md` has the five commands that put
+another one up. There is no account and no password: the code is the key to the
+stored copy, which the panel says plainly. The address is public because it is
+in the page, so every request is counted against the address it came from.
 
 ## Tests
 

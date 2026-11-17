@@ -6,4 +6,14 @@ compatibility_date = "2026-01-01"
 [[d1_databases]]
 binding = "DB"
 database_name = "linguae-sync"
-database_id = "paste-the-id-wrangler-prints-here"
+database_id = "be764a87-b4fb-4af3-911e-dab2ca8f835c"
+
+# Every request is counted against the address it came from, because the
+# worker's address is public even though nobody's code is.
+[[ratelimits]]
+name = "LIMIT"
+namespace_id = "1001"
+
+  [ratelimits.simple]
+  limit = 20
+  period = 60
