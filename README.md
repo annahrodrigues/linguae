@@ -28,7 +28,7 @@ Pages from building anything and has it copy them across as they are.
 
 | | |
 |---|---|
-| **Courses** | 7 courses, 7 units and 14 lessons each, 112 words and phrases per course. Spanish, French, German, Italian, Latin and Russian are taught from English; English is taught from Portuguese |
+| **Courses** | 7 courses, 7 units and 18 lessons each, 144 words and phrases per course. Basics runs to six lessons and the units after it to two apiece. Spanish, French, German, Italian, Latin and Russian are taught from English; English is taught from Portuguese |
 | **Exercises** | 7 kinds: match the pairs, pick the translation in either direction, listen and transcribe, build from a word bank, free typing, and say it out loud |
 | **Keyboard** | A to D pick a lettered option; in the word bank, typing a word lays its piece down as soon as only one piece can be meant, a space settles for the word as typed where something longer begins the same way, and backspace takes back the letters first and then the last piece; Enter checks |
 | **Marking** | accents and punctuation are normalised, and a one-letter typo counts as correct, with a note |
@@ -160,6 +160,16 @@ wherever it falls, so `Comment` at the front of a sentence and `comment` inside
 one are the same file. A test walks every piece of every phrase and asks the
 app for its clip, which is what holds the naming in `tools/audio.js` and the
 lookup in the page together.
+
+## Where the lessons come from
+
+They are written here. Duolingo's courses are not open source -- their GitHub
+org holds engineering tools, a linter, a Slack bot and the `halflife-regression`
+paper, and no course content at all -- and their curriculum is theirs. What a
+beginners' unit teaches is not: *man*, *woman*, *and*, *with*, *who* and the
+sentences a learner can make from them are the common property of every course
+that has ever taught a language. Each lesson here is ten words, or six phrases
+built from words the unit has already taught -- a rule the tests check.
 
 ## What the pronunciation drill really measures
 

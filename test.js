@@ -126,6 +126,7 @@ const EXPORTS = `
   typeTile: typeTile, settleTile: settleTile, rubOut: rubOut, typedChar: typedChar,
   courseHasAudio: courseHasAudio,
   pageAchievements: pageAchievements, pageProgress: pageProgress, achEarned: achEarned,
+  pageLearn: pageLearn, UNIT_META: UNIT_META,
   studiedToday: studiedToday, flame: flame, shell: shell,
   mergeState: mergeState, mergeCourse: mergeCourse, mergeSrs: mergeSrs,
   tidyCode: tidyCode, newCode: newCode, syncNow: syncNow, syncCard: syncCard,
@@ -729,7 +730,7 @@ test("the English course puts Portuguese on the known side", function () {
 test("every Russian item carries a romanisation", function () {
   const a = loadApp();
   const items = a.COURSES.ru.items;
-  assert.strictEqual(items.length, 112);
+  assert.strictEqual(items.length, 144);
   items.forEach(function (it) {
     assert.ok(it.rom && it.rom.trim(), it.id + " (" + it.en + ") has no romanisation");
     assert.ok(/[\u0400-\u04FF]/.test(it.tgt), it.id + " is not written in Cyrillic");
@@ -948,6 +949,28 @@ test("every piece a tile can show has a recording, in the courses that have any"
     });
   });
   assert.ok(checked > 300, "only " + checked + " tile words were checked");
+});
+
+test("no clip is named after a device Windows keeps for itself", function () {
+  const file = path.join(__dirname, "assets", "audio", "index.json");
+  if (!fs.existsSync(file)) return;
+  const manifest = JSON.parse(fs.readFileSync(file, "utf8"));
+  if (!manifest.words) return;
+  /* CON, PRN, AUX, NUL and the COM and LPT ports are device names there.
+     Writing con.mp3 opens the device, reports success and leaves nothing on
+     disk, so the Spanish word for "with" had no recording and nothing said
+     so. Written out rather than read from the tool that builds the names. */
+  const device = /^(con|prn|aux|nul|com[0-9]|lpt[0-9])$/i;
+  let checked = 0;
+  Object.keys(manifest.words).forEach(function (lg) {
+    Object.keys(manifest.words[lg]).forEach(function (word) {
+      const name = manifest.words[lg][word];
+      assert.ok(!device.test(name),
+        lg + '/' + name + '.mp3 cannot exist on Windows (the word is "' + word + '")');
+      checked++;
+    });
+  });
+  assert.ok(checked > 300, "only " + checked + " names were checked");
 });
 
 test("a listed clip that will not load falls back to the voice", function () {
@@ -2281,21 +2304,122 @@ test("every course carries the same shape", function () {
   a.LANGS.forEach(function (lg) {
     const c = a.COURSES[lg];
     assert.strictEqual(c.units.length, 7, lg + " should have seven units");
-    assert.strictEqual(c.lessons.length, 14, lg + " should have fourteen lessons");
-    assert.strictEqual(c.items.length, 112, lg + " should have 112 items");
+    /* Basics runs to six lessons; the units after it are still a pair each. */
+    eq(c.units.map(function (u) { return u.lessons.length; }), [6, 2, 2, 2, 2, 2, 2],
+       lg + " has the wrong number of lessons in a unit");
+    assert.strictEqual(c.lessons.length, 18, lg + " should have eighteen lessons");
+    assert.strictEqual(c.items.length, 144, lg + " should have 144 items");
     c.lessons.forEach(function (l) {
       assert.ok(l.kind === "w" || l.kind === "p", "a lesson is words or phrases");
-      /* Units alternate: ten words, then six phrases built from them. */
+      /* Lessons alternate: ten words, then six phrases built from them. */
       assert.strictEqual(l.items.length, l.kind === "w" ? 10 : 6,
         lg + "/" + l.id + " has the wrong number of items");
       l.items.forEach(function (it) {
         assert.strictEqual(it.kind, l.kind, lg + "/" + it.id + " does not match its lesson");
       });
     });
+    c.units.forEach(function (u) {
+      /* Joined into a string: both sides are built inside the vm, and a deep
+         comparison of two arrays from there trips over the realm. */
+      assert.strictEqual(u.lessons.map(function (l) { return l.kind; }).join(""),
+        u.lessons.map(function (l, i) { return i % 2 === 0 ? "w" : "p"; }).join(""),
+        lg + "/" + u.id + " should teach the words before the phrases made of them");
+    });
     const vocab = c.lessons.filter(function (l) { return l.kind === "w"; });
-    assert.strictEqual(vocab.length, 7, lg + " should have one vocabulary lesson per unit");
+    assert.strictEqual(vocab.length, 9, lg + " should have nine vocabulary lessons");
     vocab.forEach(function (l) {
       assert.ok(l.items.length >= 5, lg + "/" + l.id + " cannot fill a five-pair match");
+    });
+  });
+});
+
+test("a lesson is named by the set it teaches, and no two share one", function () {
+  const a = loadApp();
+  a.LANGS.forEach(function (lg) {
+    const seen = {};
+    a.COURSES[lg].lessons.forEach(function (l) {
+      const n = l.id.slice(lg.length + 1);
+      assert.ok(/^\d+$/.test(n), lg + "/" + l.id + " is not numbered");
+      assert.ok(!seen[n], lg + " teaches set " + n + " twice");
+      seen[n] = true;
+      assert.ok(l.items.length, lg + "/" + l.id + " teaches an empty set");
+    });
+  });
+});
+
+test("the lessons that were there before keep the ids progress was saved under", function () {
+  const a = loadApp();
+  /* A crown is kept against a lesson id. The four lessons added to Basics took
+     the numbers after the last of the old ones for that reason: inserting them
+     in the middle would have moved every crown onto the wrong lesson. */
+  const ids = a.COURSES.fr.lessons.map(function (l) { return l.id; });
+  for (let n = 0; n <= 13; n++) {
+    assert.ok(ids.indexOf("fr-" + n) > -1, "fr-" + n + " is gone");
+  }
+  eq(a.COURSES.fr.units[0].lessons.map(function (l) { return l.id; }),
+     ["fr-0", "fr-1", "fr-14", "fr-15", "fr-16", "fr-17"],
+     "Basics keeps its two and carries the four new ones after them");
+  eq(a.COURSES.fr.units[1].lessons.map(function (l) { return l.id; }), ["fr-2", "fr-3"],
+     "and the unit after it is untouched");
+  eq(a.COURSES.fr.units[0].lessons.map(function (l) { return l.title; }),
+     ["Greetings", "First phrases", "Everyday words", "Saying who you are",
+      "Small words", "Putting it together"],
+     "each one keeps its own name, which is what the path prints");
+});
+
+test("the path counts the lessons a unit really has", function () {
+  const a = loadApp();
+  freshSrs(a, "fr");
+  const html = a.pageLearn();
+  /* The trophy at the end of a unit used to say "both lessons", which Basics
+     stopped being the moment it grew past two. */
+  assert.ok(html.indexOf("Finish all 6 lessons") > -1, "Basics asks for its six");
+  assert.ok(html.indexOf("Finish all 2 lessons") > -1, "and the units after it for their two");
+  assert.strictEqual(html.indexOf("both lessons"), -1);
+});
+
+test("the new lessons are reachable in order, not locked behind the old ones", function () {
+  const a = loadApp();
+  freshSrs(a, "fr");
+  const ids = a.COURSES.fr.units[0].lessons.map(function (l) { return l.id; });
+  assert.strictEqual(a.unlocked("fr-0"), true, "the first is always open");
+  assert.strictEqual(a.unlocked("fr-14"), false, "the rest wait their turn");
+
+  ids.forEach(function (id) {
+    assert.strictEqual(a.unlocked(id), true, id + " should be open by now");
+    a.prog().crowns[id] = 1;
+  });
+  assert.strictEqual(a.unlocked("fr-2"), true,
+    "and the unit after Basics opens once Basics is done");
+});
+
+test("the new phrases in Basics are built from the words Basics teaches", function () {
+  const a = loadApp();
+  a.LANGS.forEach(function (lg) {
+    const basics = a.COURSES[lg].units[0];
+    const taught = {};
+    basics.lessons.forEach(function (l) {
+      if (l.kind === "w") l.items.forEach(function (it) {
+        a.words(it.tgt).forEach(function (w) { taught[a.loose(w)] = true; });
+      });
+    });
+    /* Only the four that were added: the two that came before lean on words
+       the course never lists on its own. Four distinct words, not a share of
+       the whole phrase -- a sentence is mostly the grammar holding it up, and
+       a course that only ever said what it had already taught could not make
+       a sentence at all. */
+    ["15", "17"].forEach(function (n) {
+      const lesson = basics.lessons.filter(function (l) { return l.id === lg + "-" + n; })[0];
+      assert.ok(lesson, lg + " has no lesson " + n);
+      const met = {};
+      lesson.items.forEach(function (it) {
+        a.words(it.tgt).forEach(function (w) {
+          if (taught[a.loose(w)]) met[a.loose(w)] = true;
+        });
+      });
+      assert.ok(Object.keys(met).length >= 4,
+        lg + "/" + lesson.id + " leans on only " + Object.keys(met).length
+        + " of the words Basics teaches");
     });
   });
 });

@@ -579,21 +579,39 @@ main{flex:1;width:100%;max-width:1200px;margin:0 auto;padding-block:28px 64px;
    Items: ["english", "target"] or ["english", "target", "romanization", [bank chunks]]
    Lessons 0,2,4,6 are vocabulary; 1,3,5,7 are sentences.                     */
 
+/* Each lesson says which set it teaches, rather than the set being worked out
+   from where the lesson sits. A lesson's id is that number, so the four that
+   were added to Basics could take 14 to 17 and sit where they belong in the
+   path without renumbering everything after them -- which would have moved
+   every crown anyone had already earned onto the wrong lesson.
+
+   `w` is a lesson of ten words; `p` is six phrases built out of them. */
 const UNIT_META = [
   { id:"u1", title:"Basics",        caption:"Unit 1", tint:"#1D7A5F", deep:"#17634E",
-    lessons:["Greetings","First phrases"] },
+    lessons:[{ title:"Greetings", kind:"w", set:0 },
+             { title:"First phrases", kind:"p", set:1 },
+             { title:"Everyday words", kind:"w", set:14 },
+             { title:"Saying who you are", kind:"p", set:15 },
+             { title:"Small words", kind:"w", set:16 },
+             { title:"Putting it together", kind:"p", set:17 }] },
   { id:"u2", title:"People",        caption:"Unit 2", tint:"#1D7A5F", deep:"#17634E",
-    lessons:["Family","About you"] },
+    lessons:[{ title:"Family", kind:"w", set:2 },
+             { title:"About you", kind:"p", set:3 }] },
   { id:"u3", title:"Food & travel", caption:"Unit 3", tint:"#1D7A5F", deep:"#17634E",
-    lessons:["Food & drink","Out and about"] },
+    lessons:[{ title:"Food & drink", kind:"w", set:4 },
+             { title:"Out and about", kind:"p", set:5 }] },
   { id:"u4", title:"Everyday life", caption:"Unit 4", tint:"#1D7A5F", deep:"#17634E",
-    lessons:["Time words","Daily sentences"] },
+    lessons:[{ title:"Time words", kind:"w", set:6 },
+             { title:"Daily sentences", kind:"p", set:7 }] },
   { id:"u5", title:"Numbers & money", caption:"Unit 5", tint:"#1D7A5F", deep:"#17634E",
-    lessons:["Numbers","Shopping"] },
+    lessons:[{ title:"Numbers", kind:"w", set:8 },
+             { title:"Shopping", kind:"p", set:9 }] },
   { id:"u6", title:"Around town",    caption:"Unit 6", tint:"#1D7A5F", deep:"#17634E",
-    lessons:["Places","Directions"] },
+    lessons:[{ title:"Places", kind:"w", set:10 },
+             { title:"Directions", kind:"p", set:11 }] },
   { id:"u7", title:"Describing",     caption:"Unit 7", tint:"#1D7A5F", deep:"#17634E",
-    lessons:["Describing words","How you feel"] }
+    lessons:[{ title:"Describing words", kind:"w", set:12 },
+             { title:"How you feel", kind:"p", set:13 }] }
 ];
 
 const COURSES = {
@@ -622,6 +640,11 @@ const COURSES = {
       [["Where do you live?","¿Dónde vives?"],["The shop is near the river.","La tienda está cerca del río."],["Turn left.","Gira a la izquierda."],["It is far from here.","Está lejos de aquí."],["I am going to the market.","Voy al mercado."],["The city is beautiful.","La ciudad es hermosa."]],
       [["big","grande"],["small","pequeño"],["good","bueno"],["bad","malo"],["new","nuevo"],["old","viejo"],["beautiful","hermoso"],["happy","feliz"],["tired","cansado"],["difficult","difícil"]],
       [["I am tired.","Estoy cansado."],["She is happy.","Ella está feliz."],["The book is very good.","El libro es muy bueno."],["This is too difficult.","Esto es demasiado difícil."],["We are not sad.","No estamos tristes."],["I like this city.","Me gusta esta ciudad."]]
+    ,
+      [["man","hombre"],["woman","mujer"],["boy","ni\u00f1o"],["girl","ni\u00f1a"],["name","nombre"],["language","idioma"],["word","palabra"],["book","libro"],["teacher","maestro"],["student","estudiante"]],
+      [["I am a student.","Soy estudiante."],["She is a teacher.","Ella es maestra."],["This is my book.","Este es mi libro."],["The woman has a book.","La mujer tiene un libro."],["I speak one language.","Hablo un idioma."],["What is this?","\u00bfQu\u00e9 es esto?"]],
+      [["and","y"],["or","o"],["but","pero"],["with","con"],["very","muy"],["also","tambi\u00e9n"],["here","aqu\u00ed"],["there","all\u00ed"],["who","qui\u00e9n"],["what","qu\u00e9"]],
+      [["The man and the woman.","El hombre y la mujer."],["Here is my book.","Aqu\u00ed est\u00e1 mi libro."],["Who is here?","\u00bfQui\u00e9n est\u00e1 aqu\u00ed?"],["The teacher is with the girl.","La maestra est\u00e1 con la ni\u00f1a."],["I speak with the teacher.","Hablo con el maestro."],["The girl is also a student.","La ni\u00f1a tambi\u00e9n es estudiante."]]
     ]},
 
   fr: { name:"French", code:"FR", tint:"#2c5fd0", tts:"fr-FR", nativeName:"Français",
@@ -649,6 +672,11 @@ const COURSES = {
       [["Where do you live?","Où habites-tu?"],["The shop is near the river.","Le magasin est près de la rivière."],["Turn left.","Tourne à gauche."],["It is far from here.","C'est loin d'ici."],["I am going to the market.","Je vais au marché."],["The city is beautiful.","La ville est belle."]],
       [["big","grand"],["small","petit"],["good","bon"],["bad","mauvais"],["new","nouveau"],["old","vieux"],["beautiful","beau"],["happy","heureux"],["tired","fatigué"],["difficult","difficile"]],
       [["I am tired.","Je suis fatigué."],["She is happy.","Elle est heureuse."],["The book is very good.","Le livre est très bon."],["This is too difficult.","C'est trop difficile."],["We are not sad.","Nous ne sommes pas tristes."],["I like this city.","J'aime cette ville."]]
+    ,
+      [["man","homme"],["woman","femme"],["boy","gar\u00e7on"],["girl","fille"],["name","nom"],["language","langue"],["word","mot"],["book","livre"],["teacher","professeur"],["student","\u00e9tudiant"]],
+      [["I am a student.","Je suis \u00e9tudiant."],["She is a teacher.","Elle est professeur."],["This is my book.","C'est mon livre."],["The woman has a book.","La femme a un livre."],["I speak one language.","Je parle une langue."],["What is this?","Qu'est-ce que c'est?"]],
+      [["and","et"],["or","ou"],["but","mais"],["with","avec"],["very","tr\u00e8s"],["also","aussi"],["here","ici"],["there","l\u00e0"],["who","qui"],["what","quoi"]],
+      [["The man and the woman.","L'homme et la femme."],["Here is my book.","Voici mon livre."],["Who is here?","Qui est ici?"],["The teacher is with the girl.","Le professeur est avec la fille."],["I speak with the teacher.","Je parle avec le professeur."],["The girl is also a student.","La fille est aussi \u00e9tudiante."]]
     ]},
 
   de: { name:"German", code:"DE", tint:"#3f3f46", tts:"de-DE", nativeName:"Deutsch",
@@ -676,6 +704,11 @@ const COURSES = {
       [["Where do you live?","Wo wohnst du?"],["The shop is near the river.","Das Geschäft ist nahe am Fluss."],["Turn left.","Biege links ab."],["It is far from here.","Es ist weit von hier."],["I am going to the market.","Ich gehe zum Markt."],["The city is beautiful.","Die Stadt ist schön."]],
       [["big","groß"],["small","klein"],["good","gut"],["bad","schlecht"],["new","neu"],["old","alt"],["beautiful","schön"],["happy","glücklich"],["tired","müde"],["difficult","schwierig"]],
       [["I am tired.","Ich bin müde."],["She is happy.","Sie ist glücklich."],["The book is very good.","Das Buch ist sehr gut."],["This is too difficult.","Das ist zu schwierig."],["We are not sad.","Wir sind nicht traurig."],["I like this city.","Diese Stadt gefällt mir."]]
+    ,
+      [["man","Mann"],["woman","Frau"],["boy","Junge"],["girl","M\u00e4dchen"],["name","Name"],["language","Sprache"],["word","Wort"],["book","Buch"],["teacher","Lehrer"],["student","Student"]],
+      [["I am a student.","Ich bin Student."],["She is a teacher.","Sie ist Lehrerin."],["This is my book.","Das ist mein Buch."],["The woman has a book.","Die Frau hat ein Buch."],["I speak one language.","Ich spreche eine Sprache."],["What is this?","Was ist das?"]],
+      [["and","und"],["or","oder"],["but","aber"],["with","mit"],["very","sehr"],["also","auch"],["here","hier"],["there","dort"],["who","wer"],["what","was"]],
+      [["The man and the woman.","Der Mann und die Frau."],["Here is my book.","Hier ist mein Buch."],["Who is here?","Wer ist hier?"],["The teacher is with the girl.","Der Lehrer ist mit dem M\u00e4dchen."],["I speak with the teacher.","Ich spreche mit dem Lehrer."],["The girl is also a student.","Das M\u00e4dchen ist auch Studentin."]]
     ]},
 
   it: { name:"Italian", code:"IT", tint:"#1A8844", tts:"it-IT", nativeName:"Italiano",
@@ -703,6 +736,11 @@ const COURSES = {
       [["Where do you live?","Dove abiti?"],["The shop is near the river.","Il negozio è vicino al fiume."],["Turn left.","Gira a sinistra."],["It is far from here.","È lontano da qui."],["I am going to the market.","Vado al mercato."],["The city is beautiful.","La città è bella."]],
       [["big","grande"],["small","piccolo"],["good","buono"],["bad","cattivo"],["new","nuovo"],["old","vecchio"],["beautiful","bello"],["happy","felice"],["tired","stanco"],["difficult","difficile"]],
       [["I am tired.","Sono stanco."],["She is happy.","Lei è felice."],["The book is very good.","Il libro è molto buono."],["This is too difficult.","Questo è troppo difficile."],["We are not sad.","Non siamo tristi."],["I like this city.","Mi piace questa città."]]
+    ,
+      [["man","uomo"],["woman","donna"],["boy","ragazzo"],["girl","ragazza"],["name","nome"],["language","lingua"],["word","parola"],["book","libro"],["teacher","insegnante"],["student","studente"]],
+      [["I am a student.","Sono studente."],["She is a teacher.","Lei \u00e8 insegnante."],["This is my book.","Questo \u00e8 il mio libro."],["The woman has a book.","La donna ha un libro."],["I speak one language.","Parlo una lingua."],["What is this?","Che cos'\u00e8 questo?"]],
+      [["and","e"],["or","o"],["but","ma"],["with","con"],["very","molto"],["also","anche"],["here","qui"],["there","l\u00e0"],["who","chi"],["what","che"]],
+      [["The man and the woman.","L'uomo e la donna."],["Here is my book.","Ecco il mio libro."],["Who is here?","Chi \u00e8 qui?"],["The teacher is with the girl.","L'insegnante \u00e8 con la ragazza."],["I speak with the teacher.","Parlo con l'insegnante."],["The girl is also a student.","Anche la ragazza \u00e8 studentessa."]]
     ]},
 
   la: { name:"Latin", code:"LA", tint:"#8a6d3b", tts:"it-IT", nativeName:"Lingua Latina",
@@ -731,6 +769,11 @@ const COURSES = {
       [["Where do you live?","Ubi habitās?"],["The shop is near the river.","Taberna prope flūmen est."],["Turn left.","Ad sinistram verte."],["It is far from here.","Longē hinc abest."],["I am going to the market.","Ad forum eō."],["The city is beautiful.","Urbs pulchra est."]],
       [["big","magnus"],["small","parvus"],["good","bonus"],["bad","malus"],["new","novus"],["old","vetus"],["beautiful","pulcher"],["happy","laetus"],["tired","fessus"],["difficult","difficilis"]],
       [["I am tired.","Fessus sum."],["She is happy.","Laeta est."],["The book is very good.","Liber valdē bonus est."],["This is too difficult.","Hoc nimis difficile est."],["We are not sad.","Nōn trīstēs sumus."],["I like this city.","Haec urbs mihi placet."]]
+    ,
+      [["man","vir"],["woman","fēmina"],["boy","puer"],["girl","puella"],["name","nōmen"],["language","lingua"],["word","verbum"],["book","liber"],["teacher","magister"],["student","discipulus"]],
+      [["I am a student.","Discipulus sum."],["She is a teacher.","Magistra est."],["This is my book.","Hic liber meus est."],["The woman has a book.","Fēmina librum habet."],["I speak one language.","Ūnam linguam loquor."],["What is this?","Quid est hoc?"]],
+      [["and","et"],["or","aut"],["but","sed"],["with","cum"],["very","valdē"],["also","quoque"],["here","hīc"],["there","ibi"],["who","quis"],["what","quid"]],
+      [["The man and the woman.","Vir et fēmina."],["Here is my book.","Hīc est liber meus."],["Who is here?","Quis hīc est?"],["The teacher is with the girl.","Magister cum puellā est."],["I speak with the teacher.","Cum magistrō loquor."],["The girl is also a student.","Puella quoque discipula est."]]
     ]},
 
   ru: { name:"Russian", code:"RU", tint:"#1B4F9C", tts:"ru-RU", nativeName:"\u0420\u0443\u0441\u0441\u043a\u0438\u0439",
@@ -758,6 +801,11 @@ const COURSES = {
       [["Where do you live?","\u0413\u0434\u0435 \u0432\u044b \u0436\u0438\u0432\u0451\u0442\u0435?","Gde vy zhivyote?"],["The shop is near the river.","\u041c\u0430\u0433\u0430\u0437\u0438\u043d \u0440\u044f\u0434\u043e\u043c \u0441 \u0440\u0435\u043a\u043e\u0439.","Magazin ryadom s rekoy."],["Turn left.","\u041f\u043e\u0432\u0435\u0440\u043d\u0438\u0442\u0435 \u043d\u0430\u043b\u0435\u0432\u043e.","Povernite nalevo."],["It is far from here.","\u042d\u0442\u043e \u0434\u0430\u043b\u0435\u043a\u043e \u043e\u0442\u0441\u044e\u0434\u0430.","Eto daleko otsyuda."],["I am going to the market.","\u042f \u0438\u0434\u0443 \u043d\u0430 \u0440\u044b\u043d\u043e\u043a.","Ya idu na rynok."],["The city is beautiful.","\u0413\u043e\u0440\u043e\u0434 \u043a\u0440\u0430\u0441\u0438\u0432\u044b\u0439.","Gorod krasivyy."]],
       [["big","\u0431\u043e\u043b\u044c\u0448\u043e\u0439","bolshoy"],["small","\u043c\u0430\u043b\u0435\u043d\u044c\u043a\u0438\u0439","malenkiy"],["good","\u0445\u043e\u0440\u043e\u0448\u0438\u0439","khoroshiy"],["bad","\u043f\u043b\u043e\u0445\u043e\u0439","plokhoy"],["new","\u043d\u043e\u0432\u044b\u0439","novyy"],["old","\u0441\u0442\u0430\u0440\u044b\u0439","staryy"],["beautiful","\u043a\u0440\u0430\u0441\u0438\u0432\u044b\u0439","krasivyy"],["happy","\u0441\u0447\u0430\u0441\u0442\u043b\u0438\u0432\u044b\u0439","schastlivyy"],["tired","\u0443\u0441\u0442\u0430\u043b\u044b\u0439","ustalyy"],["difficult","\u0442\u0440\u0443\u0434\u043d\u044b\u0439","trudnyy"]],
       [["I am tired.","\u042f \u0443\u0441\u0442\u0430\u043b.","Ya ustal."],["She is happy.","\u041e\u043d\u0430 \u0441\u0447\u0430\u0441\u0442\u043b\u0438\u0432\u0430.","Ona schastliva."],["The book is very good.","\u041a\u043d\u0438\u0433\u0430 \u043e\u0447\u0435\u043d\u044c \u0445\u043e\u0440\u043e\u0448\u0430\u044f.","Kniga ochen khoroshaya."],["This is too difficult.","\u042d\u0442\u043e \u0441\u043b\u0438\u0448\u043a\u043e\u043c \u0442\u0440\u0443\u0434\u043d\u043e.","Eto slishkom trudno."],["We are not sad.","\u041c\u044b \u043d\u0435 \u0433\u0440\u0443\u0441\u0442\u0438\u043c.","My ne grustim."],["I like this city.","\u041c\u043d\u0435 \u043d\u0440\u0430\u0432\u0438\u0442\u0441\u044f \u044d\u0442\u043e\u0442 \u0433\u043e\u0440\u043e\u0434.","Mne nravitsya etot gorod."]]
+    ,
+      [["man","\u043c\u0443\u0436\u0447\u0438\u043d\u0430","muzhchina"],["woman","\u0436\u0435\u043d\u0449\u0438\u043d\u0430","zhenshchina"],["boy","\u043c\u0430\u043b\u044c\u0447\u0438\u043a","malchik"],["girl","\u0434\u0435\u0432\u043e\u0447\u043a\u0430","devochka"],["name","\u0438\u043c\u044f","imya"],["language","\u044f\u0437\u044b\u043a","yazyk"],["word","\u0441\u043b\u043e\u0432\u043e","slovo"],["book","\u043a\u043d\u0438\u0433\u0430","kniga"],["teacher","\u0443\u0447\u0438\u0442\u0435\u043b\u044c","uchitel"],["student","\u0443\u0447\u0435\u043d\u0438\u043a","uchenik"]],
+      [["I am a student.","\u042f \u0443\u0447\u0435\u043d\u0438\u043a.","Ya uchenik."],["She is a teacher.","\u041e\u043d\u0430 \u0443\u0447\u0438\u0442\u0435\u043b\u044c\u043d\u0438\u0446\u0430.","Ona uchitelnitsa."],["This is my book.","\u042d\u0442\u043e \u043c\u043e\u044f \u043a\u043d\u0438\u0433\u0430.","Eto moya kniga."],["The woman has a book.","\u0423 \u0436\u0435\u043d\u0449\u0438\u043d\u044b \u0435\u0441\u0442\u044c \u043a\u043d\u0438\u0433\u0430.","U zhenshchiny est kniga."],["I know one language.","\u042f \u0437\u043d\u0430\u044e \u043e\u0434\u0438\u043d \u044f\u0437\u044b\u043a.","Ya znayu odin yazyk."],["What is this?","\u0427\u0442\u043e \u044d\u0442\u043e?","Chto eto?"]],
+      [["and","\u0438","i"],["or","\u0438\u043b\u0438","ili"],["but","\u043d\u043e","no"],["with","\u0441","s"],["very","\u043e\u0447\u0435\u043d\u044c","ochen"],["also","\u0442\u043e\u0436\u0435","tozhe"],["here","\u0437\u0434\u0435\u0441\u044c","zdes"],["there","\u0442\u0430\u043c","tam"],["who","\u043a\u0442\u043e","kto"],["what","\u0447\u0442\u043e","chto"]],
+      [["The man and the woman.","\u041c\u0443\u0436\u0447\u0438\u043d\u0430 \u0438 \u0436\u0435\u043d\u0449\u0438\u043d\u0430.","Muzhchina i zhenshchina."],["Here is my book.","\u0412\u043e\u0442 \u043c\u043e\u044f \u043a\u043d\u0438\u0433\u0430.","Vot moya kniga."],["Who is here?","\u041a\u0442\u043e \u0437\u0434\u0435\u0441\u044c?","Kto zdes?"],["The teacher is with the girl.","\u0423\u0447\u0438\u0442\u0435\u043b\u044c \u0441 \u0434\u0435\u0432\u043e\u0447\u043a\u043e\u0439.","Uchitel s devochkoy."],["I speak with the teacher.","\u042f \u0433\u043e\u0432\u043e\u0440\u044e \u0441 \u0443\u0447\u0438\u0442\u0435\u043b\u0435\u043c.","Ya govoryu s uchitelem."],["The girl is also a student.","\u0414\u0435\u0432\u043e\u0447\u043a\u0430 \u0442\u043e\u0436\u0435 \u0443\u0447\u0435\u043d\u0438\u0446\u0430.","Devochka tozhe uchenitsa."]]
     ]},
 
   en: { name:"English", code:"EN", tint:"#2B4A8B", tts:"en-US", nativeName:"Ingl\u00eas", from:"Portuguese",
@@ -786,6 +834,11 @@ const COURSES = {
       [["Onde voc\u00ea mora?","Where do you live?"],["A loja fica perto do rio.","The shop is near the river."],["Vire \u00e0 esquerda.","Turn left."],["\u00c9 longe daqui.","It is far from here."],["Estou indo ao mercado.","I am going to the market."],["A cidade \u00e9 linda.","The city is beautiful."]],
       [["grande","big"],["pequeno","small"],["bom","good"],["ruim","bad"],["novo","new"],["velho","old"],["bonito","beautiful"],["feliz","happy"],["cansado","tired"],["dif\u00edcil","difficult"]],
       [["Estou cansado.","I am tired."],["Ela est\u00e1 feliz.","She is happy."],["O livro \u00e9 muito bom.","The book is very good."],["Isso \u00e9 dif\u00edcil demais.","This is too difficult."],["N\u00e3o estamos tristes.","We are not sad."],["Eu gosto desta cidade.","I like this city."]]
+    ,
+      [["homem","man"],["mulher","woman"],["menino","boy"],["menina","girl"],["nome","name"],["l\u00edngua","language"],["palavra","word"],["livro","book"],["professor","teacher"],["estudante","student"]],
+      [["Eu sou estudante.","I am a student."],["Ela \u00e9 professora.","She is a teacher."],["Este \u00e9 o meu livro.","This is my book."],["A mulher tem um livro.","The woman has a book."],["Eu falo uma l\u00edngua.","I speak one language."],["O que \u00e9 isto?","What is this?"]],
+      [["e","and"],["ou","or"],["mas","but"],["com","with"],["muito","very"],["tamb\u00e9m","also"],["aqui","here"],["ali","there"],["quem","who"],["o que","what"]],
+      [["O homem e a mulher.","The man and the woman."],["Aqui est\u00e1 o meu livro.","Here is my book."],["Quem est\u00e1 aqui?","Who is here?"],["O professor est\u00e1 com a menina.","The teacher is with the girl."],["Eu falo com o professor.","I speak with the teacher."],["A menina tamb\u00e9m \u00e9 estudante.","The girl is also a student."]]
     ]}
 };
 
@@ -802,11 +855,10 @@ LANGS.forEach(function(lg){
     return {
       id: u.id, title: u.title, caption: u.caption, tint: u.tint, deep: u.deep,
       tip: c.tips[ui],
-      lessons: u.lessons.map(function(name, li){
-        const n = ui * 2 + li;
-        const kind = n % 2 === 0 ? "w" : "p";
+      lessons: u.lessons.map(function(l){
+        const n = l.set, kind = l.kind;
         return {
-          id: lg + "-" + n, title: name, kind: kind, unit: u.id, tint: u.tint, deep: u.deep,
+          id: lg + "-" + n, title: l.title, kind: kind, unit: u.id, tint: u.tint, deep: u.deep,
           items: c.sets[n].map(function(row, ri){
             return { id: lg + "-" + n + "-" + ri, en: row[0], tgt: row[1], rom: row[2] || "", bank: row[3] || null, kind: kind, lesson: lg + "-" + n };
           })
@@ -2086,7 +2138,8 @@ function pageLearn(){
       + '<div class="node node--trophy' + (cleared ? " on" : "") + '" style="--k:0">'
       + '<button class="node__btn" disabled aria-label="' + esc(u.title)
       + (cleared ? ", complete" : ", not finished yet") + '">' + ic("emoji_events") + '</button>'
-      + '<span class="node__lbl">' + (cleared ? "Unit cleared" : "Finish both lessons") + '</span></div>'
+      + '<span class="node__lbl">' + (cleared ? "Unit cleared"
+          : "Finish all " + u.lessons.length + " lessons") + '</span></div>'
       + '</div>'
       + (ui < c.units.length - 1
           ? '<div class="divider"><span>' + esc(c.units[ui + 1].title) + '</span></div>' : "")

@@ -72,6 +72,13 @@ function key(word) {
    it is a different kind of trouble on every filesystem it meets. Distinct
    words that land on the same slug get a number, which is why the manifest
    holds the map rather than the app working it out. */
+/* Windows keeps a handful of names for devices -- CON, PRN, AUX, NUL and the
+   COM and LPT ports -- and will not let a file be called con.mp3. Writing one
+   opens the device instead, succeeds, and leaves nothing on disk, so the clip
+   for Spanish "con" went missing without a word of complaint. The file is
+   renamed rather than the word, which the manifest maps back anyway. */
+const DEVICE = /^(con|prn|aux|nul|com[0-9]|lpt[0-9])$/;
+
 function slugs(keys) {
   const taken = {}, out = {};
   keys.slice().sort().forEach(function (k, i) {
@@ -79,6 +86,7 @@ function slugs(keys) {
       .replace(/['\s]+/g, "-").replace(/[^a-z0-9-]/g, "")
       .replace(/-+/g, "-").replace(/^-|-$/g, "");
     if (!base) base = "w" + i;
+    if (DEVICE.test(base)) base = base + "-w";
     let name = base, n = 1;
     while (taken[name]) name = base + "-" + (++n);
     taken[name] = true;
