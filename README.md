@@ -37,6 +37,7 @@ Pages from building anything and has it copy them across as they are.
 | **Hearts** | 5 per lesson; run out and the lesson restarts |
 | **Sounds** | a recording on each answer, and three for the end of a lesson: a clean run, a run with up to three misses, and one with more; where a browser will not play them, a pair of oscillators answers instead |
 | **Audio** | a recorded clip when the repository has one, otherwise the browser's `speechSynthesis` at the natural rate, on the best voice the system offers — a neural or Google voice over a legacy one; with neither, that word goes quiet rather than be read in another language's accent |
+| **Build the sentence** | every tile reads itself when you tap it, going in and coming back out. A tile is a piece of a phrase rather than a word the course teaches, so the pieces are recorded separately and played by the word rather than by an id |
 | **Pronunciation** | the browser's own `SpeechRecognition` listens and the phrase is marked word by word; seven words in ten passes. See the note below on what this can and cannot tell you |
 | **Accessibility** | every pair of text colours clears AA contrast (4.5:1) in both themes, checked by a test that reads the stylesheet |
 | **More than one device** | a code made on one device and typed on the other, and the two histories are merged rather than one overwriting the other. `sync/` holds the small Cloudflare Worker behind it, already deployed |
@@ -98,6 +99,7 @@ course can be filled in a few words at a time.
 
 ```bash
 node tools/audio.js list fr > fr.tsv   # id, BCP-47 tag and text, one row each
+node tools/audio.js words fr > w.tsv   # the same, for the single words on the tiles
 node tools/audio.js manifest           # scan the folder, write assets/audio/index.json
 node tools/audio.js status             # how much of each course is recorded
 ```
@@ -118,8 +120,9 @@ so the recordings cost nothing per character and need no API key.
 pip install kokoro-onnx soundfile misaki espeakng-loader
 # weights into tools/models/, from the model-files-v1.1 release of
 # https://github.com/thewh1teagle/kokoro-onnx
-python tools/kokoro.py --voices     # the voice used for each course
-python tools/kokoro.py --all        # record everything it can speak
+python tools/kokoro.py --voices        # the voice used for each course
+python tools/kokoro.py --all          # record everything it can speak
+python tools/kokoro.py --all --words  # and the single words on the tiles
 node tools/audio.js manifest
 ```
 
@@ -132,11 +135,30 @@ node tools/audio.js manifest
 | German | **none.** Kokoro v1.0 speaks eight languages and German is not one of them, so that course stays on the visitor's own system voice |
 
 The weights are around 350 MB and are not committed; `tools/models/` is ignored
-and `tools/kokoro.py` says where to fetch them. The clips themselves are 448 clips, 4.3 MB in all.
+and `tools/kokoro.py` says where to fetch them. The clips themselves are 1,034
+files and 8.8 MB in all: 560 phrases and items, and 474 single words for the
+tiles. The manifest that indexes them is 13 KB.
 
 `assets/audio/index.json` is the whole contract. Without it the app never asks
 for a clip, so the feature costs nothing until the first file lands. Recording
 a language also switches its listening exercises back on, item by item.
+
+### The words on the tiles
+
+"Build the sentence" cuts a phrase into tiles, and a tile is almost never an
+item: of the 97 chunks the French course can put on one, 11 are words it
+teaches on their own and the other 86 exist only as pieces. There is no id to
+look a recording up by, and tapping one reached for the system voice — which on
+a machine with no French voice is silence. So the pieces are recorded too,
+under `assets/audio/<lang>/w/`, and played by the word.
+
+The manifest carries the map from word to file, because the file name has to be
+ASCII and the word does not: `ça` is in `ca.mp3`, and `está` is **not** in
+`esta.mp3`, since Spanish already has an `esta`. One recording serves a word
+wherever it falls, so `Comment` at the front of a sentence and `comment` inside
+one are the same file. A test walks every piece of every phrase and asks the
+app for its clip, which is what holds the naming in `tools/audio.js` and the
+lookup in the page together.
 
 ## What the pronunciation drill really measures
 

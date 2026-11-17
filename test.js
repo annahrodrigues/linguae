@@ -121,6 +121,8 @@ const EXPORTS = `
   scoreSpeech: scoreSpeech, sameWord: sameWord, startMic: startMic, micSays: micSays,
   canListen: canListen, bodyFor: bodyFor, footFor: footFor,
   AUDIO: AUDIO, clipFor: clipFor, sayItem: sayItem, canHear: canHear, FLAGS: FLAGS,
+  clipForWord: clipForWord, sayWord: sayWord, wordKey: wordKey,
+  useTile: useTile, dropTile: dropTile,
   courseHasAudio: courseHasAudio,
   pageAchievements: pageAchievements, pageProgress: pageProgress, achEarned: achEarned,
   studiedToday: studiedToday, flame: flame, shell: shell,
@@ -229,6 +231,19 @@ function loadApp(options) {
       };
     };
   }
+  /* opts.manifest stands in for assets/audio/index.json arriving over the
+     network, which is the only thing that switches the recordings on. */
+  if (opts.manifest && !opts.server) {
+    sandbox.fetch = function (url) {
+      if (String(url).indexOf("assets/audio/index.json") === -1) {
+        return Promise.resolve({ ok: false, status: 404 });
+      }
+      return Promise.resolve({
+        ok: true, status: 200,
+        json: function () { return Promise.resolve(opts.manifest); }
+      });
+    };
+  }
   /* opts.server stands in for the sync worker: one object per code, and a log
      of everything that was asked of it. The app is handed a fetch only when a
      test asks for one, because without it the app does not sync at all. */
@@ -309,6 +324,11 @@ function loadApp(options) {
       const lg = id.split("-")[0];
       api.AUDIO.byLang[lg] = (api.AUDIO.byLang[lg] || 0) + 1;
     });
+  };
+  /* The same, for the clips recorded for the tiles: a map of word to file,
+     exactly as the manifest carries it. */
+  api.addWordClips = function (lg, map) {
+    api.AUDIO.words[lg] = Object.assign({}, api.AUDIO.words[lg] || {}, map);
   };
   api.typeAnswer = function (text) {
     const el = makeElement("textarea");
@@ -778,6 +798,155 @@ test("a clip is played in place of the voice, and only where there is one", func
   assert.strictEqual(a.played.length, 1, "no clip for this one");
   assert.strictEqual(a.spoken.length, 1, "so the voice takes it");
   assert.strictEqual(a.spoken[0].text, items[1].tgt);
+});
+
+/* ---------- the words on the tiles ---------- */
+
+/* Build the sentence cuts a phrase into pieces, and a piece is almost never an
+   item: of the 97 chunks in the French course, 11 are words the course teaches
+   on their own. Tapping one used to reach for the system voice, which on most
+   machines has nothing to say in French. */
+function bankSession(a, tiles) {
+  const item = a.course().items.filter(function (x) { return x.kind === "p"; })[0];
+  a.startLesson(a.course().lessons[0]);
+  const s = a.session();
+  s.queue[s.idx] = { id: item.id, item: item, kind: "bank",
+                     parts: tiles.slice(), tiles: tiles.slice() };
+  s.used = [];
+  /* Whatever starting the lesson played is not what this test is about. */
+  a.played.length = 0;
+  a.spoken.length = 0;
+  return s;
+}
+
+test("a word's clip is found by the word, not by an id it does not have", function () {
+  const a = loadApp({ voices: [NEURAL_FR] });
+  a.setActive("fr");
+  assert.strictEqual(a.clipForWord("Comment", "fr"), null, "nothing recorded yet");
+  a.addWordClips("fr", { "comment": "comment", "ça": "ca", "está": "esta-2" });
+
+  assert.strictEqual(a.clipForWord("Comment", "fr"), "assets/audio/fr/w/comment.mp3",
+    "the same word at the front of a sentence is the same recording");
+  assert.strictEqual(a.clipForWord("\u00e7a", "fr"), "assets/audio/fr/w/ca.mp3",
+    "the file name is ASCII even where the word is not");
+  assert.strictEqual(a.clipForWord("est\u00e1", "fr"), "assets/audio/fr/w/esta-2.mp3",
+    "and an accent is not flattened away: esta and est\u00e1 are two words");
+  assert.strictEqual(a.clipForWord("esta", "fr"), null, "which is why this one is not that one");
+  assert.strictEqual(a.clipForWord("comment", "es"), null, "a course only reads its own");
+});
+
+test("tapping a tile reads the word, from its own recording", function () {
+  const a = loadApp({ voices: [BRAZIL_PT] });   /* no French voice on this machine */
+  a.setActive("fr");
+  a.addWordClips("fr", { "comment": "comment", "va": "va" });
+  bankSession(a, ["Comment", "va"]);
+
+  a.useTile(0);
+  eq(a.clipsPlayed(), ["assets/audio/fr/w/comment.mp3"]);
+  eq(a.session().used, ["Comment"], "and the word still goes into the sentence");
+  assert.strictEqual(a.spoken.length, 0, "the voice is not asked as well");
+
+  /* A tap on a tile that is not there -- a stale click on a redrawn row --
+     must not drop an empty word into the sentence. */
+  a.useTile(9);
+  a.dropTile(9);
+  eq(a.session().used, ["Comment"], "nothing was added and nothing was taken");
+  assert.strictEqual(a.clipsPlayed().length, 1, "and nothing was read");
+});
+
+test("taking a word back out reads it again", function () {
+  const a = loadApp({ voices: [BRAZIL_PT] });
+  a.setActive("fr");
+  a.addWordClips("fr", { "comment": "comment", "va": "va" });
+  bankSession(a, ["Comment", "va"]);
+
+  a.useTile(1);
+  a.useTile(0);
+  eq(a.session().used, ["va", "Comment"]);
+  a.dropTile(0);
+  eq(a.session().used, ["Comment"], "the word came out");
+  eq(a.clipsPlayed(), ["assets/audio/fr/w/va.mp3", "assets/audio/fr/w/comment.mp3",
+                       "assets/audio/fr/w/va.mp3"], "and was read on the way");
+});
+
+test("a word nobody recorded takes the voice, or nothing at all", function () {
+  const withVoice = loadApp({ voices: [NEURAL_FR] });
+  withVoice.setActive("fr");
+  bankSession(withVoice, ["Comment"]);
+  withVoice.useTile(0);
+  assert.strictEqual(withVoice.clipsPlayed().length, 0, "there is no clip for it");
+  assert.strictEqual(withVoice.spoken.length, 1, "so the voice reads it");
+  assert.strictEqual(withVoice.spoken[0].text, "Comment");
+
+  /* And where the machine has no French voice either, silence: French read
+     with a Portuguese mouth teaches the wrong thing. */
+  const mute = loadApp({ voices: [BRAZIL_PT] });
+  mute.setActive("fr");
+  bankSession(mute, ["Comment"]);
+  mute.useTile(0);
+  assert.strictEqual(mute.clipsPlayed().length, 0);
+  assert.strictEqual(mute.spoken.length, 0);
+  eq(mute.session().used, ["Comment"], "the tile still moves");
+});
+
+test("a word clip that will not load falls back to the voice", function () {
+  const a = loadApp({ voices: [NEURAL_FR], clipFails: true });
+  a.setActive("fr");
+  a.addWordClips("fr", { "comment": "comment" });
+  bankSession(a, ["Comment"]);
+
+  a.useTile(0);
+  assert.strictEqual(a.clipsPlayed().length, 1, "it tries the recording first");
+  assert.strictEqual(a.spoken.length, 1, "and the voice picks up when it will not load");
+  assert.strictEqual(a.spoken[0].text, "Comment");
+});
+
+atest("the manifest is the only thing that switches a recording on", async function () {
+  const a = loadApp({ voices: [BRAZIL_PT], manifest: {
+    format: "mp3",
+    items: ["fr-0-0"],
+    words: { fr: { "comment": "comment" } }
+  } });
+  a.setActive("fr");
+  /* Three promises deep: the fetch, the json, and the handler. */
+  await new Promise(function (r) { setTimeout(r, 0); });
+
+  assert.strictEqual(a.clipFor(a.course().byId["fr-0-0"]), "assets/audio/fr/fr-0-0.mp3",
+    "the item clips came off the manifest");
+  assert.strictEqual(a.clipForWord("Comment", "fr"), "assets/audio/fr/w/comment.mp3",
+    "and so did the tile words");
+});
+
+/* The recordings are named by tools/audio.js and found by the app, and the two
+   agree on the word only as long as they agree on what a word is. This reads
+   the manifest that was actually written and asks the app for every piece the
+   tiles of that course can show. */
+test("every piece a tile can show has a recording, in the courses that have any", function () {
+  const file = path.join(__dirname, "assets", "audio", "index.json");
+  if (!fs.existsSync(file)) return;
+  const manifest = JSON.parse(fs.readFileSync(file, "utf8"));
+  if (!manifest.words) return;
+
+  const a = loadApp();
+  a.AUDIO.format = manifest.format || "mp3";
+  Object.keys(manifest.words).forEach(function (lg) {
+    a.addWordClips(lg, manifest.words[lg]);
+  });
+
+  let checked = 0;
+  Object.keys(manifest.words).forEach(function (lg) {
+    assert.ok(a.LANGS.indexOf(lg) > -1, lg + " is not a course");
+    a.COURSES[lg].items.forEach(function (it) {
+      if (it.kind !== "p") return;
+      (it.bank ? it.bank : a.words(it.tgt)).forEach(function (w) {
+        assert.ok(a.clipForWord(w, lg),
+          lg + ': no recording for "' + w + '" (from ' + it.id + ') — rerun'
+          + " python tools/kokoro.py " + lg + " --words && node tools/audio.js manifest");
+        checked++;
+      });
+    });
+  });
+  assert.ok(checked > 300, "only " + checked + " tile words were checked");
 });
 
 test("a listed clip that will not load falls back to the voice", function () {

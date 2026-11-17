@@ -1565,7 +1565,7 @@ function chime(ok){
    installed, which is the whole problem with speech synthesis for a language
    course. assets/audio/index.json lists the clips that exist; with no manifest
    the app falls back to the voice, so this costs nothing until a file lands. */
-const AUDIO = { format: "mp3", have: {}, byLang: {} };
+const AUDIO = { format: "mp3", have: {}, byLang: {}, words: {} };
 let clipEl = null;
 
 function loadClips(){
@@ -1580,6 +1580,7 @@ function loadClips(){
         const lg = String(id).split("-")[0];
         AUDIO.byLang[lg] = (AUDIO.byLang[lg] || 0) + 1;
       });
+      if (m.words && typeof m.words === "object") AUDIO.words = m.words;
       /* Clips can switch listening exercises on, so the trail is redrawn. */
       if (!sess && S.active) render();
     })
@@ -1589,6 +1590,19 @@ function loadClips(){
 function clipFor(item){
   if (!item || !item.id || !AUDIO.have[item.id]) return null;
   return "assets/audio/" + String(item.id).split("-")[0] + "/" + item.id + "." + AUDIO.format;
+}
+
+/* A tile in "build the sentence" is a piece of a phrase, not an item, so it
+   has no clip under its own name and no id to look one up by. The pieces are
+   recorded separately, under w/, and the manifest says which file belongs to
+   which word -- the word as it is written, lowercased, because the file name
+   has to be ASCII and "esta" and "está" must not share a recording. */
+function wordKey(w){ return String(w).toLowerCase().replace(/[‘’ʼ]/g, "'"); }
+function clipForWord(word, lg){
+  if (!word || !lg) return null;
+  const map = AUDIO.words[lg];
+  const file = map && map[wordKey(word)];
+  return file ? "assets/audio/" + lg + "/w/" + file + "." + AUDIO.format : null;
 }
 
 function playClip(url, onFail){
@@ -1621,6 +1635,25 @@ function sayItem(item, lang){
     if (playClip(url, toVoice)) return;
   }
   speak(item.tgt, lang);
+}
+
+/* One word off a tile, by the same two routes as an item: its own recording
+   where there is one, the system voice where there is not, and silence where
+   there is neither -- which is most machines, for most languages, and is the
+   reason the pieces are recorded at all. */
+function sayWord(word, c){
+  if (!word || !c) return;
+  const url = clipForWord(word, c.id);
+  if (url) {
+    let fallen = false;
+    const toVoice = function(){
+      if (fallen) return;
+      fallen = true;
+      speak(word, c.tts);
+    };
+    if (playClip(url, toVoice)) return;
+  }
+  speak(word, c.tts);
 }
 
 /* One item, by either route. */
@@ -2645,6 +2678,26 @@ function skipQuestion(){
   submit();
 }
 
+/* A word tapped into the sentence, and a word tapped back out of it. Both
+   read it aloud, and both live here rather than inside the click handler so
+   that a test can tap one without a browser to tap it in. */
+function useTile(i){
+  const ex = currentEx();
+  const word = ex && ex.tiles ? ex.tiles[i] : undefined;
+  if (word === undefined) return;
+  sess.used.push(word);
+  sayWord(word, course());
+  render();
+}
+function dropTile(i){
+  /* No guard on the index: splicing past the end takes nothing out, and
+     sayWord has nothing to read. */
+  const word = sess.used[i];
+  sess.used.splice(i, 1);
+  sayWord(word, course());
+  render();
+}
+
 function wireLesson(){
   const q = document.getElementById("quit");
   if (q) q.addEventListener("click", quitLesson);
@@ -2662,15 +2715,13 @@ function wireLesson(){
     b.addEventListener("click", function(){ choose(b.getAttribute("data-pick")); });
   });
   app.querySelectorAll("[data-tile]").forEach(function(b){
-    b.addEventListener("click", function(){
-      const word = ex.tiles[+b.getAttribute("data-tile")];
-      sess.used.push(word);
-      speak(word, course().tts);
-      render();
-    });
+    b.addEventListener("click", function(){ useTile(+b.getAttribute("data-tile")); });
   });
+  /* Taking a word back out reads it again: the tap has to move the word
+     either way, and hearing the piece once more is the whole reason a person
+     pokes at these tiles. */
   app.querySelectorAll("[data-un]").forEach(function(b){
-    b.addEventListener("click", function(){ sess.used.splice(+b.getAttribute("data-un"), 1); render(); });
+    b.addEventListener("click", function(){ dropTile(+b.getAttribute("data-un")); });
   });
   app.querySelectorAll("[data-side]").forEach(function(b){
     b.addEventListener("click", function(){ tapPair(b, ex); });

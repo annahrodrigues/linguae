@@ -4,8 +4,14 @@ Record the course audio with Kokoro-82M, locally.
     python tools/kokoro.py --voices          what it can and cannot speak
     python tools/kokoro.py fr                record the whole French course
     python tools/kokoro.py fr --limit 6      just the first few, to audition
+    python tools/kokoro.py fr --words        the single words on the tiles
     python tools/kokoro.py --all             every course Kokoro has a voice for
     node tools/audio.js manifest             then index what was written
+
+A "build the sentence" exercise cuts a phrase into tiles, and a tile is
+almost never an item of its own, so tapping one plays nothing unless the
+machine happens to have a voice for that language. --words records the
+pieces as well, into assets/audio/<lang>/w/.
 
 Kokoro-82M is an 82-million-parameter model under Apache-2.0, so the clips are
 made on this machine with no API key and no per-character cost. This script
@@ -59,10 +65,10 @@ UNVOICED = {
 }
 
 
-def phrases(lang):
+def phrases(lang, which="list"):
     """id, BCP-47 tag and text, straight from the page."""
     out = subprocess.run(
-        ["node", os.path.join(HERE, "audio.js"), "list", lang],
+        ["node", os.path.join(HERE, "audio.js"), which, lang],
         capture_output=True, text=True, encoding="utf-8", cwd=ROOT,
     )
     if out.returncode:
@@ -89,7 +95,7 @@ def engine():
     return Kokoro(model, voices)
 
 
-def record(lang, limit=0, force=False, speed=1.0):
+def record(lang, limit=0, force=False, speed=1.0, which="list"):
     if lang in UNVOICED:
         print(lang + ": " + UNVOICED[lang])
         return 0
@@ -100,7 +106,7 @@ def record(lang, limit=0, force=False, speed=1.0):
     import soundfile as sf
 
     spec = VOICES[lang]
-    rows = phrases(lang)
+    rows = phrases(lang, which)
     if limit:
         rows = rows[:limit]
     folder = os.path.join(AUDIO, lang)
@@ -109,7 +115,8 @@ def record(lang, limit=0, force=False, speed=1.0):
 
     written = skipped = 0
     for i, row in enumerate(rows, 1):
-        path = os.path.join(folder, row["id"] + "." + FORMAT)
+        path = os.path.join(folder, *(row["id"].split("/"))) + "." + FORMAT
+        os.makedirs(os.path.dirname(path), exist_ok=True)
         if os.path.exists(path) and not force:
             skipped += 1
             continue
@@ -140,6 +147,8 @@ def main():
     ap.add_argument("--all", action="store_true", help="every course Kokoro has a voice for")
     ap.add_argument("--voices", action="store_true", help="show the voice for each course")
     ap.add_argument("--limit", type=int, default=0, help="only the first N phrases")
+    ap.add_argument("--words", action="store_true",
+                    help="the single words the sentence tiles show, into <lang>/w/")
     ap.add_argument("--force", action="store_true", help="redo clips that already exist")
     ap.add_argument("--speed", type=float, default=1.0, help="1.0 is the natural rate")
     a = ap.parse_args()
@@ -148,8 +157,9 @@ def main():
         show()
         return
     total = 0
+    which = "words" if a.words else "list"
     for lang in (list(VOICES) if a.all else [a.lang]):
-        total += record(lang, a.limit, a.force, a.speed)
+        total += record(lang, a.limit, a.force, a.speed, which)
     if total:
         print("\nnow run:  node tools/audio.js manifest")
 
