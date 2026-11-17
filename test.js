@@ -122,7 +122,8 @@ const EXPORTS = `
   canListen: canListen, bodyFor: bodyFor, footFor: footFor,
   AUDIO: AUDIO, clipFor: clipFor, sayItem: sayItem, canHear: canHear, FLAGS: FLAGS,
   clipForWord: clipForWord, sayWord: sayWord, wordKey: wordKey,
-  useTile: useTile, dropTile: dropTile,
+  useTile: useTile, dropTile: dropTile, tileFree: tileFree, bankHits: bankHits,
+  typeTile: typeTile, settleTile: settleTile, rubOut: rubOut, typedChar: typedChar,
   courseHasAudio: courseHasAudio,
   pageAchievements: pageAchievements, pageProgress: pageProgress, achEarned: achEarned,
   studiedToday: studiedToday, flame: flame, shell: shell,
@@ -1629,6 +1630,223 @@ test("a Review button that hands over its click still runs today's review", func
   /* The older buttons pass the event straight through as the first argument. */
   a.startPractice({ type: "click" });
   assert.strictEqual(a.session().set, "due", "an event is not a set name");
+});
+
+/* ---------- typing the sentence instead of tapping it ---------- */
+
+/* The pieces are planted: what is being checked is how the letters find them,
+   and no course owes this test a sentence of the right shape. */
+function bankSession(a, tiles) {
+  a.startLesson(a.course().lessons[0]);
+  const s = a.session();
+  const item = a.course().items[0];
+  s.queue[s.idx] = { id: item.id, item: item, kind: "bank",
+                     parts: tiles.slice(), tiles: tiles };
+  s.state = "ask";
+  s.used = [];
+  s.typed = "";
+  return s;
+}
+
+function typeWord(a, text) {
+  String(text).split("").forEach(function (ch) { a.typeTile(ch); });
+}
+
+test("a word only one piece begins with is laid down as it is typed", function () {
+  const a = loadApp();
+  freshSrs(a, "fr");
+  const s = bankSession(a, ["Comment", "t'appelles", "le", "jours", "tu"]);
+
+  a.typeTile("t");
+  eq(s.used, [], "t could still be t'appelles or tu");
+  assert.strictEqual(s.typed, "t", "so the letters wait on screen");
+
+  a.typeTile("u");
+  eq(s.used, ["tu"], "and tu can be nothing else");
+  assert.strictEqual(s.typed, "", "the letters are spent");
+});
+
+test("a letter no piece begins with is dropped where it falls", function () {
+  const a = loadApp();
+  freshSrs(a, "fr");
+  const s = bankSession(a, ["Comment", "t'appelles", "tu"]);
+  a.typeTile("t");
+  assert.strictEqual(a.typeTile("z"), false, "nothing begins tz");
+  assert.strictEqual(s.typed, "t", "and the letters typed so far are untouched");
+  eq(s.used, [], "a slip costs the keystroke, not the sentence");
+  a.typeTile("u");
+  eq(s.used, ["tu"], "and typing carries on from where it was");
+});
+
+test("where a longer piece begins the same way, a space settles it", function () {
+  const a = loadApp();
+  freshSrs(a, "fr");
+  const s = bankSession(a, ["le", "les", "chat"]);
+  typeWord(a, "le");
+  eq(s.used, [], "le is also the start of les");
+  assert.strictEqual(s.typed, "le");
+
+  assert.strictEqual(a.settleTile(), true);
+  eq(s.used, ["le"], "the space settles for the word as typed");
+  assert.strictEqual(s.typed, "");
+
+  typeWord(a, "les");
+  eq(s.used, ["le", "les"], "and the longer one still types out in full");
+});
+
+test("a space settles nothing where nothing is typed out whole", function () {
+  const a = loadApp();
+  freshSrs(a, "fr");
+  const s = bankSession(a, ["Comment", "comme", "tu"]);
+  a.typeTile("c");
+  assert.strictEqual(a.settleTile(), false, "c alone is not a word on the table");
+  eq(s.used, []);
+  assert.strictEqual(s.typed, "c", "and the letters are still waiting");
+});
+
+test("the same word printed twice is still one word", function () {
+  const a = loadApp();
+  freshSrs(a, "fr");
+  const s = bankSession(a, ["le", "le", "chat"]);
+  typeWord(a, "le");
+  eq(s.used, ["le"], "either piece will do, so it goes down at once");
+
+  typeWord(a, "le");
+  eq(s.used, ["le", "le"], "and the second piece after it");
+
+  assert.strictEqual(a.typeTile("l"), false, "with both spent, nothing begins with l");
+});
+
+test("accents and apostrophes are never in the way", function () {
+  const a = loadApp();
+  freshSrs(a, "fr");
+  const s = bankSession(a, ["\u00e7a", "comment", "va"]);
+  typeWord(a, "ca");
+  eq(s.used, ["\u00e7a"], "ca finds \u00e7a, which is what a keyboard has to hand");
+});
+
+test("a key with the accent already on it finds the word too", function () {
+  const a = loadApp();
+  freshSrs(a, "fr");
+  const s = bankSession(a, ["\u00e7a", "va", "bien"]);
+  /* The other half of the same rule: both sides of the comparison are
+     loosened, not only the word printed on the piece. */
+  typeWord(a, "\u00e7");
+  eq(s.used, ["\u00e7a"]);
+});
+
+test("an apostrophe typed inside a word is a letter like any other", function () {
+  const a = loadApp();
+  freshSrs(a, "fr");
+  const s = bankSession(a, ["t'appelles", "tu", "comment"]);
+  a.typeTile("t");
+  assert.strictEqual(s.typed, "t", "t could still be either");
+  assert.strictEqual(a.typeTile("'"), true, "the apostrophe is taken");
+  assert.strictEqual(s.typed, "t'");
+  a.typeTile("a");
+  eq(s.used, ["t'appelles"], "and it was never in the way of the match");
+});
+
+test("a keystroke that leaves nothing to compare lays nothing down", function () {
+  const a = loadApp();
+  freshSrs(a, "fr");
+  const s = bankSession(a, ["bonjour"]);
+  /* An empty prefix is the start of every word on the table, so without this
+     an apostrophe would lay down the last piece left. */
+  assert.strictEqual(a.typeTile("'"), false);
+  eq(s.used, []);
+  assert.strictEqual(s.typed, "");
+});
+
+test("backspace takes the letters back first, then the last piece", function () {
+  const a = loadApp();
+  freshSrs(a, "fr");
+  const s = bankSession(a, ["Comment", "comme", "t'appelles", "tu"]);
+  typeWord(a, "tu");
+  eq(s.used, ["tu"]);
+
+  /* c could still be Comment or comme, so it waits on screen as a letter. */
+  a.typeTile("c");
+  assert.strictEqual(s.typed, "c");
+  assert.strictEqual(a.rubOut(), true);
+  assert.strictEqual(s.typed, "", "the letter goes first");
+  eq(s.used, ["tu"], "and the piece is still down");
+
+  assert.strictEqual(a.rubOut(), true);
+  eq(s.used, [], "the next one takes the piece back up");
+  assert.strictEqual(a.rubOut(), false, "and there is nothing left to take back");
+});
+
+test("tapping a piece clears what was half typed", function () {
+  const a = loadApp();
+  freshSrs(a, "fr");
+  const s = bankSession(a, ["Comment", "t'appelles", "tu"]);
+  a.typeTile("t");
+  assert.strictEqual(s.typed, "t");
+  a.useTile(0);
+  eq(s.used, ["Comment"]);
+  assert.strictEqual(s.typed, "", "the letters went with the tap");
+});
+
+test("typing belongs to the word bank and nowhere else", function () {
+  const a = loadApp();
+  freshSrs(a, "fr");
+  const item = a.course().items[0];
+  a.startLesson(a.course().lessons[0]);
+  const s = a.session();
+  s.queue[s.idx] = { id: item.id, item: item, kind: "write" };
+  s.state = "ask";
+  assert.strictEqual(a.typeTile("t"), false, "a typed answer has its own box");
+  assert.strictEqual(a.rubOut(), false);
+
+  const bank = bankSession(a, ["tu"]);
+  bank.state = "feedback";
+  assert.strictEqual(a.typeTile("t"), false, "and a question already answered takes nothing");
+});
+
+test("the half-typed letters and the pieces they could still mean are shown", function () {
+  const a = loadApp();
+  freshSrs(a, "fr");
+  const s = bankSession(a, ["le", "les", "chat"]);
+  a.typeTile("l");
+
+  const html = a.bodyFor(s.queue[s.idx], false);
+  assert.ok(html.indexOf('<span class="typed">l</span>') > -1, "the letters sit in the sentence");
+  assert.strictEqual(html.split('tile-w hot').length - 1, 2, "both le and les are lit up");
+
+  const locked = a.bodyFor(s.queue[s.idx], true);
+  assert.strictEqual(locked.indexOf('class="typed"'), -1,
+    "once the answer is checked there is nothing left to type");
+  assert.strictEqual(locked.indexOf("hot"), -1);
+});
+
+test("a piece already in the sentence is not offered to the letters again", function () {
+  const a = loadApp();
+  freshSrs(a, "fr");
+  const s = bankSession(a, ["Comment", "tu"]);
+  typeWord(a, "tu");
+  eq(a.bankHits(s.queue[s.idx], "t"), [], "tu is down, and Comment does not begin with t");
+  assert.strictEqual(a.tileFree(s.queue[s.idx], 1), false);
+  assert.strictEqual(a.tileFree(s.queue[s.idx], 0), true);
+});
+
+test("only a letter, a digit or an apostrophe is typed into the sentence", function () {
+  const a = loadApp();
+  assert.strictEqual(a.typedChar({ key: "t" }), "t");
+  assert.strictEqual(a.typedChar({ key: "'" }), "'");
+  assert.strictEqual(a.typedChar({ key: "\u00e7" }), "\u00e7", "an accented key is a letter");
+  assert.strictEqual(a.typedChar({ key: "3" }), "3");
+  assert.strictEqual(a.typedChar({ key: "Shift" }), "", "a key with a name is not a letter");
+  assert.strictEqual(a.typedChar({ key: " " }), "", "a space settles, it does not type");
+  assert.strictEqual(a.typedChar({ key: "r", ctrlKey: true }), "",
+    "and anything held with Ctrl belongs to the browser");
+});
+
+test("the word bank says that it can be typed", function () {
+  const a = loadApp();
+  freshSrs(a, "fr");
+  const s = bankSession(a, ["tu"]);
+  assert.ok(a.footFor(s.queue[s.idx]).indexOf("Type a word") > -1);
 });
 
 /* ---------- saying it out loud ---------- */

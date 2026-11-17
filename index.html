@@ -376,6 +376,13 @@ main{flex:1;width:100%;max-width:1200px;margin:0 auto;padding-block:28px 64px;
   padding:9px 13px;font-weight:600;font-size:16px;cursor:pointer;transition:border-color var(--t)}
 .tile-w:hover:not(:disabled){border-color:var(--color-primary-ink)}
 .tile-w.used{visibility:hidden}
+.tile-w.hot{border-color:var(--color-primary-ink);background:var(--color-primary-soft)}
+.typed{display:inline-flex;align-items:center;border:1px dashed var(--color-primary-ink);
+  border-radius:10px;padding:9px 13px;font-weight:600;font-size:16px;
+  color:var(--color-primary-ink)}
+.typed::after{content:"";width:1.5px;height:17px;margin-left:3px;background:currentColor;
+  animation:caret 1.05s steps(1) infinite}
+@keyframes caret{50%{opacity:0}}
 .input{width:100%;background:var(--color-surface);border:1px solid var(--color-border);
   border-radius:var(--radius-input);padding:14px;font:500 17px/1.5 var(--font-body);
   color:var(--color-text);resize:none;min-height:92px}
@@ -1859,6 +1866,7 @@ function submit(){
 function advance(){
   sess.idx++;
   sess.sel = null; sess.used = []; sess.picked = null; sess.typo = false; sess.given = "";
+  sess.typed = "";
   sess.matched = []; sess.spoke = false;
   sess.said = null; sess.micErr = null; sess.listening = false;
   stopMic();
@@ -2526,14 +2534,18 @@ function bodyFor(ex, locked){
   }
 
   if (ex.kind === "bank") {
+    /* The letters typed so far sit at the end of the sentence, where the next
+       word is going, and every piece they could still mean is lit up. */
+    const hot = {};
+    if (sess.typed && !locked) bankHits(ex, sess.typed).forEach(function(i){ hot[i] = true; });
     const slot = sess.used.map(function(w, i){
       return '<button class="tile-w" data-un="' + i + '"' + (locked ? " disabled" : "") + '>' + esc(w) + '</button>';
-    }).join("");
+    }).join("")
+      + (sess.typed && !locked ? '<span class="typed">' + esc(sess.typed) + '</span>' : "");
     const tiles = ex.tiles.map(function(w, i){
-      const usedCount = sess.used.filter(function(u){ return u === w; }).length;
-      const before = ex.tiles.slice(0, i).filter(function(x){ return x === w; }).length;
-      const hide = before < usedCount;
-      return '<button class="tile-w' + (hide ? " used" : "") + '" data-tile="' + i + '"'
+      const hide = !tileFree(ex, i);
+      return '<button class="tile-w' + (hide ? " used" : "") + (hot[i] ? " hot" : "")
+        + '" data-tile="' + i + '"'
         + (locked || hide ? " disabled" : "") + '>' + esc(w) + '</button>';
     }).join("");
     return qhead("Build the sentence", "Say this in " + esc(c.name))
@@ -2659,7 +2671,8 @@ function footFor(ex){
               : (ex.kind === "write" ? true : sess.sel !== null);
   return '<div class="footrow">'
     + '<button class="skip" id="skip">Skip</button>'
-    + '<span class="kbdhint">Press Enter to check</span>'
+    + '<span class="kbdhint">' + (ex.kind === "bank"
+        ? "Type a word or tap it \u2014 Enter to check" : "Press Enter to check") + '</span>'
     + '<button class="btn btn--primary" id="check"' + (ready ? "" : " disabled")
     + '>Check answer</button></div>';
 }
@@ -2670,12 +2683,82 @@ function skipQuestion(){
   stopMic();
   sess.sel = null;
   sess.used = [];
+  sess.typed = "";
   sess.given = "";
   sess.said = null;
   sess.listening = false;
   const ta = document.getElementById("answer");
   if (ta) ta.value = "";
   submit();
+}
+
+/* Which pieces are still on the table. The same word can be printed on two
+   pieces, and then the first of them is the one laid down first, so a piece is
+   spent when the pieces before it do not account for every use of the word. */
+function tileFree(ex, i){
+  const w = ex.tiles[i];
+  const spent = sess.used.filter(function(u){ return u === w; }).length;
+  const before = ex.tiles.slice(0, i).filter(function(x){ return x === w; }).length;
+  return before >= spent;
+}
+
+/* The pieces that could still be meant by what has been typed. Compared
+   loosely, so an accent or an apostrophe is never in the way: ca finds ça and
+   tap finds t'appelles, which are the letters to hand on most keyboards. */
+function bankHits(ex, typed){
+  const key = loose(typed);
+  const out = [];
+  ex.tiles.forEach(function(w, i){
+    if (tileFree(ex, i) && loose(w).indexOf(key) === 0) out.push(i);
+  });
+  return out;
+}
+
+/* Typing the sentence instead of tapping it, the way Duolingo does. A letter
+   lays the piece down as soon as only one piece can be meant; where something
+   longer begins the same way -- le, with les also on the table -- a space
+   settles for the word as typed. Nothing is ever typed into the sentence
+   itself, so a letter no piece begins with is dropped where it falls: a slip
+   costs the keystroke and not the sentence. */
+function typeTile(ch){
+  const ex = currentEx();
+  if (!ex || ex.kind !== "bank" || sess.state !== "ask") return false;
+  const next = (sess.typed || "") + ch;
+  /* A keystroke that leaves nothing to compare -- an apostrophe typed first,
+     say -- would match every piece on the table, and lay one down where only
+     one is left. It is not a letter towards any word, so it is dropped. */
+  if (!loose(next)) return false;
+  const hits = bankHits(ex, next);
+  if (!hits.length) return false;
+  sess.typed = next;
+  /* The same word printed twice is still one word: either piece will do. */
+  const one = hits.every(function(i){ return ex.tiles[i] === ex.tiles[hits[0]]; });
+  if (one) { useTile(hits[0]); return true; }
+  render();
+  return true;
+}
+
+function settleTile(){
+  const ex = currentEx();
+  if (!ex || ex.kind !== "bank" || sess.state !== "ask" || !sess.typed) return false;
+  const typed = sess.typed;
+  const hit = bankHits(ex, typed).filter(function(i){
+    return loose(ex.tiles[i]) === loose(typed);
+  })[0];
+  if (hit === undefined) return false;
+  useTile(hit);
+  return true;
+}
+
+/* Backspace takes back the letters first, and then the last piece laid down,
+   which is the one the letters would have reached next. */
+function rubOut(){
+  const ex = currentEx();
+  if (!ex || ex.kind !== "bank" || sess.state !== "ask") return false;
+  if (sess.typed) { sess.typed = sess.typed.slice(0, -1); render(); return true; }
+  if (!sess.used.length) return false;
+  dropTile(sess.used.length - 1);
+  return true;
 }
 
 /* A word tapped into the sentence, and a word tapped back out of it. Both
@@ -2685,6 +2768,7 @@ function useTile(i){
   const ex = currentEx();
   const word = ex && ex.tiles ? ex.tiles[i] : undefined;
   if (word === undefined) return;
+  sess.typed = "";
   sess.used.push(word);
   sayWord(word, course());
   render();
@@ -2693,6 +2777,7 @@ function dropTile(i){
   /* No guard on the index: splicing past the end takes nothing out, and
      sayWord has nothing to read. */
   const word = sess.used[i];
+  sess.typed = "";
   sess.used.splice(i, 1);
   sayWord(word, course());
   render();
@@ -2846,6 +2931,14 @@ function optionIndexFor(key){
 }
 
 
+/* A key that carries a letter, a digit or an apostrophe, and nothing else:
+   Shift is already in the letter, and anything held with Ctrl, Alt or Cmd
+   belongs to the browser. */
+function typedChar(e){
+  return !e.ctrlKey && !e.metaKey && !e.altKey
+      && e.key.length === 1 && /[\p{L}\p{N}']/u.test(e.key) ? e.key : "";
+}
+
 document.addEventListener("keydown", function(e){
   if (!sess) return;
   if (e.key === "Enter" && e.target.tagName !== "TEXTAREA") {
@@ -2855,6 +2948,15 @@ document.addEventListener("keydown", function(e){
     return;
   }
   if (sess.state !== "ask") return;
+  const ex = currentEx();
+  if (ex && ex.kind === "bank" && e.target.tagName !== "TEXTAREA") {
+    if (e.key === "Backspace") { if (rubOut()) e.preventDefault(); return; }
+    /* Space is taken whether or not it settles anything, because a space on a
+       piece that still has the focus would otherwise tap it a second time. */
+    if (e.key === " ") { e.preventDefault(); settleTile(); return; }
+    const ch = typedChar(e);
+    if (ch) { if (typeTile(ch)) e.preventDefault(); return; }
+  }
   const i = optionIndexFor(e.key);
   if (i >= 0) {
     const b = app.querySelectorAll("[data-pick]")[i];

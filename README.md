@@ -30,6 +30,7 @@ Pages from building anything and has it copy them across as they are.
 |---|---|
 | **Courses** | 7 courses, 7 units and 14 lessons each, 112 words and phrases per course. Spanish, French, German, Italian, Latin and Russian are taught from English; English is taught from Portuguese |
 | **Exercises** | 7 kinds: match the pairs, pick the translation in either direction, listen and transcribe, build from a word bank, free typing, and say it out loud |
+| **Keyboard** | A to D pick a lettered option; in the word bank, typing a word lays its piece down as soon as only one piece can be meant, a space settles for the word as typed where something longer begins the same way, and backspace takes back the letters first and then the last piece; Enter checks |
 | **Marking** | accents and punctuation are normalised, and a one-letter typo counts as correct, with a note |
 | **Spaced repetition** | Leitner boxes at 1, 3, 7, 16 and 35 days; get one wrong and the word drops to box 2 and comes back in the same session |
 | **Practice** | a page of its own with four sets, none of them locked: today's review, a listening drill with nothing on screen but the sound, a pronunciation drill you answer by speaking, and the words you have answered wrong, the worst first. Up to 10 words a session, no hearts at stake, 8 XP |
