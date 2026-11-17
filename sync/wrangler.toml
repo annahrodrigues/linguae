@@ -1,0 +1,9 @@
+name = "linguae-sync"
+main = "worker.js"
+compatibility_date = "2026-01-01"
+
+# The id is printed by `npx wrangler d1 create linguae-sync` and goes here.
+[[d1_databases]]
+binding = "DB"
+database_name = "linguae-sync"
+database_id = "paste-the-id-wrangler-prints-here"

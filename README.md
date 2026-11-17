@@ -39,10 +39,29 @@ Pages from building anything and has it copy them across as they are.
 | **Audio** | a recorded clip when the repository has one, otherwise the browser's `speechSynthesis` at the natural rate, on the best voice the system offers — a neural or Google voice over a legacy one; with neither, that word goes quiet rather than be read in another language's accent |
 | **Pronunciation** | the browser's own `SpeechRecognition` listens and the phrase is marked word by word; seven words in ten passes. See the note below on what this can and cannot tell you |
 | **Accessibility** | every pair of text colours clears AA contrast (4.5:1) in both themes, checked by a test that reads the stylesheet |
+| **More than one device** | optional, off until you set it up: a code made on one device and typed on the other, and the two histories are merged rather than one overwriting the other. `sync/` holds the forty-line server it needs |
 
 Progress lives in `localStorage`, one record per course, under the key
-`lingua-trail-v1`. There is no account, no backend and no network call — closing
-the tab loses nothing, switching browsers loses everything.
+`lingua-trail-v1`. There is no account and nothing is required of the network:
+closing the tab loses nothing.
+
+To carry it to a phone there is one optional piece, `sync/`: a Cloudflare Worker
+holding one blob of JSON per code, free and not paused for sitting unused. It is
+off until an address is saved in **Progress → Your devices**, and the app behaves
+exactly as before while it is off — the browser is still where progress is read
+from, and a device with no network loses nothing. When it is on, each device
+**reads before it writes and merges the two**, so a phone that was offline all
+week adds what it learnt instead of flattening the laptop:
+
+- a word is taken from whichever device knows more about it — more answers is
+  more history, and on a tie the one scheduled further out was answered later
+- XP is the larger of the two, never the sum: both copies count the same past
+- crowns take the best of each, and an achievement keeps the earlier stamp,
+  which is when it was really earned
+- which course is open belongs to the device in your hand
+
+`sync/README.md` sets the server up in five commands. There is no account and no
+password: the code is the key to the stored copy, which the panel says plainly.
 
 ## Tests
 

@@ -123,6 +123,12 @@ const EXPORTS = `
   AUDIO: AUDIO, clipFor: clipFor, sayItem: sayItem, canHear: canHear, FLAGS: FLAGS,
   courseHasAudio: courseHasAudio,
   pageAchievements: pageAchievements, pageProgress: pageProgress, achEarned: achEarned,
+  mergeState: mergeState, mergeCourse: mergeCourse, mergeSrs: mergeSrs,
+  tidyCode: tidyCode, newCode: newCode, syncNow: syncNow, syncCard: syncCard,
+  syncSays: syncSays, syncWhen: syncWhen, syncOn: syncOn, viewPicker: viewPicker,
+  syncState: function(){ return sync; },
+  setSync: function(o){ Object.assign(sync, o); saveSync(); },
+  setState: function(x){ S = x; },
   state: function(){ return S; },
   session: function(){ return sess; },
   setActive: function(lg){ S.active = lg; }
@@ -222,6 +228,37 @@ function loadApp(options) {
       };
     };
   }
+  /* opts.server stands in for the sync worker: one object per code, and a log
+     of everything that was asked of it. The app is handed a fetch only when a
+     test asks for one, because without it the app does not sync at all. */
+  const server = opts.server;
+  if (server) {
+    server.slots = server.slots || {};
+    server.calls = server.calls || [];
+    sandbox.fetch = function (url, init) {
+      const method = (init && init.method) || "GET";
+      server.calls.push({ url: String(url), method: method, body: init && init.body });
+      if (server.down) return Promise.reject(new Error("failed to fetch"));
+      const at = server.now || 1700000000000;
+      const hit = String(url).match(/\/v1\/([^/?]+)$/);
+      const answer = function (status, body) {
+        return Promise.resolve({
+          ok: status >= 200 && status < 300, status: status,
+          json: function () { return Promise.resolve(body); }
+        });
+      };
+      if (!hit) return answer(404, {});                      /* the clip manifest */
+      if (server.status) return answer(server.status, { error: "no" });
+      const code = hit[1];
+      if (method === "PUT") {
+        if (server.putStatus) return answer(server.putStatus, { error: "no" });
+        server.slots[code] = JSON.parse(init.body).state;
+        return answer(200, { at: at });
+      }
+      if (!Object.prototype.hasOwnProperty.call(server.slots, code)) return answer(404, {});
+      return answer(200, { state: server.slots[code], at: at });
+    };
+  }
   if (opts.voices) {
     win.speechSynthesis = {
       getVoices() { return opts.voices; },
@@ -293,6 +330,14 @@ function test(name, fn) {
   } catch (err) {
     results.push({ name: name, ok: false, err: err });
   }
+}
+
+/* The sync client answers through promises, so those tests are collected here
+   and run after the rest. The report still prints once, and in order. */
+const waiting = [];
+function atest(name, fn) {
+  if (only && name.indexOf(only) === -1) return;
+  waiting.push({ name: name, fn: fn });
 }
 
 /* ---------- normalising an answer ---------- */
@@ -1825,7 +1870,304 @@ test("a declared word bank spells out its own phrase", function () {
   });
 });
 
+/* ---------- carrying progress between devices ---------- */
+
+const SYNC = { code: "abcd-1234-wxyz", url: "https://sync.example" };
+
+function device(server) {
+  const a = loadApp({ server: server });
+  freshSrs(a, "fr");
+  a.setSync({ code: SYNC.code, url: SYNC.url });
+  return a;
+}
+function synced(a) { return new Promise(function (res) { a.syncNow(res); }); }
+
+test("a word is known by whichever device knows more about it", function () {
+  const a = loadApp();
+  /* More answers is more history; the device that has been away does not undo
+     the one that has been used. */
+  const old = { box: 1, due: 10, seen: 1, wrong: 0 };
+  const fresh = { box: 3, due: 99, seen: 4, wrong: 1 };
+  eq(a.mergeSrs(old, fresh), fresh);
+  eq(a.mergeSrs(fresh, old), fresh, "and it does not matter which way round");
+  eq(a.mergeSrs(null, old), old, "a word only one device has met still arrives");
+  eq(a.mergeSrs(old, null), old);
+});
+
+test("answered the same number of times, the later schedule wins", function () {
+  const a = loadApp();
+  const earlier = { box: 2, due: 100, seen: 3, wrong: 0 };
+  const later = { box: 3, due: 500, seen: 3, wrong: 0 };
+  eq(a.mergeSrs(earlier, later), later);
+  eq(a.mergeSrs(later, earlier), later);
+});
+
+test("XP is the larger of the two, never the sum", function () {
+  const a = loadApp();
+  /* Both copies count the same past. Adding them would pay twice for every
+     lesson done before the two devices parted. */
+  const out = a.mergeState({ courses: { fr: { xp: 120, crowns: {}, srs: {} } } },
+                           { courses: { fr: { xp: 80, crowns: {}, srs: {} } } });
+  assert.strictEqual(out.courses.fr.xp, 120);
+});
+
+test("a lesson keeps the most crowns either device won for it", function () {
+  const a = loadApp();
+  const out = a.mergeState({ courses: { fr: { xp: 0, crowns: { "fr-0": 3, "fr-1": 1 }, srs: {} } } },
+                           { courses: { fr: { xp: 0, crowns: { "fr-0": 1, "fr-2": 5 }, srs: {} } } });
+  eq(out.courses.fr.crowns, { "fr-0": 3, "fr-1": 1, "fr-2": 5 });
+});
+
+test("an achievement keeps the moment it was actually earned", function () {
+  const a = loadApp();
+  const out = a.mergeState({ courses: { fr: { xp: 0, crowns: {}, srs: {}, ach: { first: 5000 } } } },
+                           { courses: { fr: { xp: 0, crowns: {}, srs: {}, ach: { first: 9000, week: 7000 } } } });
+  assert.strictEqual(out.courses.fr.ach.first, 5000, "the earlier stamp is the true one");
+  assert.strictEqual(out.courses.fr.ach.week, 7000, "and one side alone still counts");
+});
+
+test("the streak and the last day come from whichever went further", function () {
+  const a = loadApp();
+  const out = a.mergeState({ streak: 2, lastDay: "2026-03-01", courses: {} },
+                           { streak: 9, lastDay: "2026-03-04", courses: {} });
+  assert.strictEqual(out.streak, 9);
+  assert.strictEqual(out.lastDay, "2026-03-04");
+});
+
+test("today's XP belongs to today, and a stale day is dropped", function () {
+  const a = loadApp();
+  const same = a.mergeState({ today: "2026-03-04", todayXp: 10, courses: {} },
+                            { today: "2026-03-04", todayXp: 25, courses: {} });
+  assert.strictEqual(same.todayXp, 25, "the same day: each saw part of it");
+
+  const stale = a.mergeState({ today: "2026-03-04", todayXp: 30, courses: {} },
+                             { today: "2026-03-01", todayXp: 90, courses: {} });
+  assert.strictEqual(stale.today, "2026-03-04");
+  assert.strictEqual(stale.todayXp, 30, "yesterday's 90 is not today's goal");
+});
+
+test("the course you have open is this device's own business", function () {
+  const a = loadApp();
+  assert.strictEqual(a.mergeState({ active: "fr", courses: {} }, { active: "de", courses: {} }).active,
+    "fr", "the phone being on German does not switch the laptop");
+  assert.strictEqual(a.mergeState({ active: null, courses: {} }, { active: "de", courses: {} }).active,
+    "de", "but a device that has not chosen yet takes the other one's course");
+});
+
+test("merging is the same whichever device asks", function () {
+  const a = loadApp();
+  const one = { active: "fr", streak: 4, lastDay: "2026-03-02", today: "2026-03-02", todayXp: 10,
+                courses: { fr: { xp: 50, crowns: { "fr-0": 2 }, srs: { "fr-0-1": { box: 2, due: 20, seen: 2, wrong: 0 } } } } };
+  const two = { active: "fr", streak: 1, lastDay: "2026-03-03", today: "2026-03-03", todayXp: 4,
+                courses: { fr: { xp: 30, crowns: { "fr-0": 5 }, srs: { "fr-0-2": { box: 1, due: 9, seen: 1, wrong: 1 } } } } };
+  /* Both sides go through JSON: objects made inside the vm carry that realm's
+     prototypes, which deepStrictEqual refuses even when the contents match. */
+  eq(a.mergeState(one, two), JSON.parse(JSON.stringify(a.mergeState(two, one))));
+});
+
+test("rubbish from the server leaves this device alone", function () {
+  const a = loadApp();
+  const mine = { active: "fr", streak: 3, courses: {} };
+  assert.strictEqual(a.mergeState(mine, null), mine);
+  assert.strictEqual(a.mergeState(mine, "nonsense"), mine);
+  assert.strictEqual(a.mergeState(mine, { active: "klingon", courses: {} }).active, "fr");
+  /* A device that has not picked a course takes the other one's -- unless
+     that is not a course this app teaches. */
+  assert.strictEqual(
+    a.mergeState({ active: null, courses: {} }, { active: "klingon", courses: {} }).active, null,
+    "a course that does not exist is dropped rather than opened");
+});
+
+test("a code is made of the letters that cannot be misread", function () {
+  const a = loadApp();
+  const code = a.newCode();
+  assert.ok(/^[0-9a-z]{4}-[0-9a-z]{4}-[0-9a-z]{4}$/.test(code), code + " is the wrong shape");
+  /* i, l, o and u are left out: read off one screen and typed into another,
+     they turn into 1, 1, 0 and v. */
+  assert.strictEqual(/[ilou]/.test(code), false, code + " holds a letter that gets misread");
+  assert.notStrictEqual(a.newCode(), a.newCode(), "two codes in a row are not the same code");
+});
+
+test("a code typed by hand is read as it was meant", function () {
+  const a = loadApp();
+  assert.strictEqual(a.tidyCode("ABCD-1234-WXYZ"), "abcd-1234-wxyz");
+  assert.strictEqual(a.tidyCode("  abcd 1234 wxyz "), "abcd-1234-wxyz", "spaces and no dashes");
+  assert.strictEqual(a.tidyCode("abcdI234wxyz"), "abcd1234wxyz".slice(0, 4) + "-1234-wxyz",
+    "a capital I was a one");
+  assert.strictEqual(a.tidyCode("abcd-1234-wxyO"), "abcd-1234-wxy0", "and an O was a zero");
+  assert.strictEqual(a.tidyCode("abcd-1234"), "", "too short is not a code");
+  assert.strictEqual(a.tidyCode("abcd-1234-wxyz-0000"), "", "nor too long");
+  assert.strictEqual(a.tidyCode(""), "");
+  assert.strictEqual(a.tidyCode(null), "");
+});
+
+atest("two devices end up knowing everything both of them learnt", async function () {
+  const server = {};
+  const laptop = device(server);
+  const items = laptop.course().items;
+  laptop.gradeItem(items[0].id, true);
+  laptop.gradeItem(items[1].id, true);
+  await synced(laptop);
+
+  const phone = device(server);
+  phone.gradeItem(items[5].id, true);
+  await synced(phone);
+
+  assert.strictEqual(phone.srsOf(items[0].id).seen, 1, "the laptop's words came down");
+  assert.strictEqual(phone.srsOf(items[5].id).seen, 1, "and its own are still here");
+
+  await synced(laptop);
+  assert.strictEqual(laptop.srsOf(items[5].id).seen, 1, "and the phone's word went home");
+});
+
+atest("the first device to use a code is not an error", async function () {
+  const server = {};
+  const a = device(server);
+  a.gradeItem(a.course().items[0].id, true);
+  const ok = await synced(a);
+  assert.strictEqual(ok, true, "nothing stored yet simply means this device is first");
+  assert.strictEqual(a.syncState().err, "");
+  assert.ok(server.slots[SYNC.code], "and its progress is now up there");
+});
+
+atest("it reads before it writes, so a device that was away adds instead of flattening", async function () {
+  const server = {};
+  const a = device(server);
+  await synced(a);
+  const mine = server.calls.filter(function (c) { return c.url.indexOf("/v1/") > -1; });
+  assert.strictEqual(mine[0].method, "GET");
+  assert.strictEqual(mine[1].method, "PUT");
+});
+
+atest("a server that cannot be reached costs nothing", async function () {
+  const server = { down: true };
+  const a = device(server);
+  a.gradeItem(a.course().items[0].id, true);
+  const ok = await synced(a);
+  assert.strictEqual(ok, false);
+  assert.strictEqual(a.srsOf(a.course().items[0].id).seen, 1, "the lesson is still here");
+  assert.ok(a.syncState().err, "and the panel has something to say");
+  assert.ok(a.syncSays().indexOf("Nothing is lost") > -1);
+
+  server.down = false;
+  assert.strictEqual(await synced(a), true, "and it goes across next time");
+  assert.strictEqual(a.syncState().err, "", "with the warning gone");
+});
+
+atest("an error from the server is not read as progress", async function () {
+  const server = { status: 500 };
+  const a = device(server);
+  a.gradeItem(a.course().items[0].id, true);
+  assert.strictEqual(await synced(a), false);
+  assert.strictEqual(a.srsOf(a.course().items[0].id).seen, 1);
+  assert.ok(a.syncSays().indexOf("500") > -1, "and says what came back");
+});
+
+atest("a write that did not land is not a sync", async function () {
+  /* The read can go through and the write still fail. Counting that as done
+     would leave the panel claiming progress is safe somewhere it is not. */
+  const server = { putStatus: 500 };
+  const a = device(server);
+  a.gradeItem(a.course().items[0].id, true);
+  assert.strictEqual(await synced(a), false);
+  assert.strictEqual(a.syncState().at, 0, "nothing is claimed to have gone across");
+  assert.ok(a.syncCard().indexOf("Not synced yet") > -1, "and the panel says so");
+});
+
+atest("without a code or an address nothing is sent anywhere", async function () {
+  const server = {};
+  const quiet = loadApp({ server: server });
+  freshSrs(quiet, "fr");
+  assert.strictEqual(quiet.syncOn(), false);
+  assert.strictEqual(await synced(quiet), false);
+
+  quiet.setSync({ code: SYNC.code, url: "" });
+  assert.strictEqual(quiet.syncOn(), false, "a code with nowhere to send it is not sync");
+  assert.strictEqual(await synced(quiet), false);
+
+  quiet.setSync({ code: "", url: SYNC.url });
+  assert.strictEqual(quiet.syncOn(), false, "nor an address with no code");
+  assert.strictEqual(await synced(quiet), false);
+
+  assert.strictEqual(server.calls.filter(function (c) { return c.url.indexOf("/v1/") > -1; }).length, 0);
+});
+
+atest("finishing a lesson carries it across by itself", async function () {
+  const server = {};
+  const a = device(server);
+  playLesson(a);
+  /* finish() asks for a sync; the answer lands a tick later. */
+  await new Promise(function (r) { setTimeout(r, 0); });
+  assert.ok(server.slots[SYNC.code], "the lesson went up without being asked");
+  assert.ok(server.slots[SYNC.code].courses.fr.xp > 0, "with the XP it earned");
+});
+
+test("the panel asks for one thing at a time", function () {
+  const a = loadApp({ server: {} });
+  freshSrs(a, "fr");
+  let html = a.syncCard();
+  assert.ok(html.indexOf('id="syncurl"') > -1, "with nowhere to sync, it wants the address");
+  assert.strictEqual(html.indexOf('id="syncnew"'), -1, "and nothing else yet");
+
+  a.setSync({ url: SYNC.url });
+  html = a.syncCard();
+  assert.ok(html.indexOf('id="syncnew"') > -1, "with an address, it offers a code");
+  assert.ok(html.indexOf('id="synccode"') > -1, "or takes the one the other device has");
+
+  a.setSync({ code: SYNC.code, at: Date.now() - 3600000 });
+  html = a.syncCard();
+  assert.ok(html.indexOf(SYNC.code) > -1, "once on, it shows the code to type over there");
+  assert.ok(html.indexOf("1 hour ago") > -1, "and when it last went across");
+  assert.ok(html.indexOf('id="syncoff"') > -1, "with a way to stop");
+});
+
+test("a device that has never been used offers the panel at the front door", function () {
+  const fresh = loadApp({ server: {} });
+  /* The panel otherwise sits behind a course, and someone arriving on their
+     phone has already chosen one -- over on the other device. */
+  assert.ok(fresh.viewPicker().indexOf('id="syncurl"') > -1,
+    "a new device should be able to type its code before anything else");
+
+  const used = loadApp({ server: {} });
+  freshSrs(used, "fr");
+  used.touchStreak();
+  assert.strictEqual(used.viewPicker().indexOf('id="syncurl"'), -1,
+    "but swapping courses later is not the moment to talk about devices");
+});
+
+atest("a fresh device gets the other one's course along with its progress", async function () {
+  const server = {};
+  const laptop = device(server);
+  laptop.gradeItem(laptop.course().items[0].id, true);
+  laptop.addXp(30);
+  await synced(laptop);
+
+  const phone = loadApp({ server: server });
+  assert.strictEqual(phone.state().active, null, "nothing chosen here yet");
+  phone.setSync({ code: SYNC.code, url: SYNC.url });
+  await synced(phone);
+  assert.strictEqual(phone.state().active, "fr", "the course came across too");
+  assert.strictEqual(phone.prog().xp, 30);
+});
+
+test("a mistyped code is turned away before the server hears about it", function () {
+  const a = loadApp({ server: {} });
+  freshSrs(a, "fr");
+  a.setSync({ url: SYNC.url, err: "badcode" });
+  assert.ok(a.syncCard().indexOf("twelve letters and numbers") > -1);
+});
+
 /* ---------- report ---------- */
+
+(async function report() {
+for (const t of waiting) {
+  try {
+    await t.fn();
+    results.push({ name: t.name, ok: true });
+  } catch (err) {
+    results.push({ name: t.name, ok: false, err: err });
+  }
+}
 
 const failed = results.filter(function (r) { return !r.ok; });
 results.forEach(function (r) {
@@ -1838,3 +2180,4 @@ if (failed.length) {
   failed.forEach(function (r) { if (r.err && r.err.stack) console.log("\n" + r.err.stack); });
   process.exit(1);
 }
+})();

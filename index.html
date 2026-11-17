@@ -379,6 +379,11 @@ main{flex:1;width:100%;max-width:1200px;margin:0 auto;padding-block:28px 64px;
 .input:focus{outline:none;border-color:var(--color-primary-ink);
   box-shadow:0 0 0 3px var(--color-primary-soft)}
 .hint{color:var(--color-text-muted);font-size:13px;margin-top:8px}
+.input--line{min-height:0;font-size:15px}
+.synccode{font-family:var(--font-heading);font-weight:700;font-size:26px;letter-spacing:.12em;
+  text-align:center;background:var(--color-surface-soft);border:1px dashed var(--color-border);
+  border-radius:var(--radius-input);padding:16px 8px;margin:10px 0 2px;user-select:all;word-break:break-all}
+.syncwarn{color:var(--color-coral-ink)}
 .pairs{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .col{display:flex;flex-direction:column;gap:10px}
 .pair{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-button);
@@ -880,6 +885,197 @@ function touchStreak(){
   else if (d > 1) S.streak = 1;
   else if (S.streak === 0) S.streak = 1;
   S.lastDay = t;
+}
+
+/* ============================== SYNC ==============================
+
+   Progress still lives in this browser and is still read from here: nothing
+   below is waited on before a lesson runs, and with no network the app behaves
+   exactly as it did. Sync is a second copy kept somewhere both devices can
+   reach, and the two are *merged* rather than one overwriting the other -- a
+   phone that was offline all week still knows words the laptop does not.
+
+   There is no account and no password. A code is made on one device and typed
+   on the other, and that code is the key to the copy: anyone holding it can
+   read and write your progress. It is twelve random characters, which is far
+   too many to guess, but it is worth knowing that it is the whole of the lock.
+
+   The server it talks to is forty lines of Cloudflare Worker; sync/README.md
+   sets one up. Until an address is saved here, none of this does anything. */
+
+const SYNC_KEY = "lingua-sync-v1";
+/* Filled in once the worker is deployed, so a new device needs only the code.
+   Empty, and the panel asks for the address first. */
+const SYNC_HOME = "";
+
+let sync = loadSync();
+function loadSync(){
+  const base = { code: "", url: "", at: 0, err: "" };
+  try {
+    const raw = localStorage.getItem(SYNC_KEY);
+    if (raw) {
+      const p = JSON.parse(raw);
+      if (p && typeof p === "object") Object.assign(base, p);
+    }
+  } catch (e) { /* storage unavailable — this device simply does not sync */ }
+  if (!base.url) base.url = SYNC_HOME;
+  return base;
+}
+function saveSync(){ try { localStorage.setItem(SYNC_KEY, JSON.stringify(sync)); } catch (e) {} }
+
+/* Crockford's alphabet: no i, l, o or u, so a code read off one screen and
+   typed into another cannot turn into a different code, and nothing in it
+   spells a word by accident. */
+const CODE_CHARS = "0123456789abcdefghjkmnpqrstvwxyz";
+const CODE_LEN = 12;
+
+function newCode(){
+  const bytes = new Uint8Array(CODE_LEN);
+  if (typeof crypto !== "undefined" && crypto.getRandomValues) crypto.getRandomValues(bytes);
+  else for (let i = 0; i < CODE_LEN; i++) bytes[i] = Math.floor(Math.random() * 256);
+  let out = "";
+  /* 256 divides by 32, so the remainder favours no letter over another. */
+  for (let i = 0; i < CODE_LEN; i++) out += CODE_CHARS.charAt(bytes[i] % 32);
+  return out.slice(0, 4) + "-" + out.slice(4, 8) + "-" + out.slice(8, 12);
+}
+
+/* A code typed by hand, put back into the one shape the server will accept.
+   The letters Crockford leaves out are the ones that are misread, so they are
+   read as what they were meant to be rather than refused. */
+function tidyCode(raw){
+  const t = String(raw || "").toLowerCase().replace(/[^a-z0-9]/g, "")
+    .replace(/[il]/g, "1").replace(/o/g, "0").replace(/u/g, "v");
+  if (t.length !== CODE_LEN) return "";
+  for (let i = 0; i < t.length; i++) if (CODE_CHARS.indexOf(t.charAt(i)) === -1) return "";
+  return t.slice(0, 4) + "-" + t.slice(4, 8) + "-" + t.slice(8, 12);
+}
+
+/* ---- merging two histories ----
+
+   Neither copy is the copy. For each word, whichever device knows more about
+   it wins: more answers is more history, and where both have answered the same
+   number of times the one scheduled further out was answered later. */
+function mergeSrs(a, b){
+  if (!a) return b;
+  if (!b) return a;
+  if ((a.seen || 0) !== (b.seen || 0)) return (a.seen || 0) > (b.seen || 0) ? a : b;
+  if ((a.due || 0) !== (b.due || 0)) return (a.due || 0) > (b.due || 0) ? a : b;
+  return (a.box || 0) >= (b.box || 0) ? a : b;
+}
+
+function mergeCourse(a, b){
+  a = a || freshCourse();
+  b = b || freshCourse();
+  /* XP is the larger, not the sum: both copies count the same past, and adding
+     them would pay you twice for every lesson you did before the split. */
+  const out = { xp: Math.max(a.xp || 0, b.xp || 0), crowns: {}, srs: {}, ach: {} };
+  [a, b].forEach(function(side){
+    Object.keys(side.crowns || {}).forEach(function(id){
+      out.crowns[id] = Math.max(out.crowns[id] || 0, side.crowns[id] || 0);
+    });
+    Object.keys(side.srs || {}).forEach(function(id){
+      out.srs[id] = mergeSrs(out.srs[id], side.srs[id]);
+    });
+    /* An achievement is stamped with the moment it was unlocked, and that
+       moment is the earlier of the two: it is when you actually earned it. */
+    Object.keys(side.ach || {}).forEach(function(id){
+      const was = out.ach[id], now = side.ach[id];
+      out.ach[id] = was ? Math.min(was, now) : now;
+    });
+  });
+  return out;
+}
+
+function mergeState(mine, theirs){
+  if (!theirs || typeof theirs !== "object") return mine;
+  const out = {
+    /* Which course is open belongs to the device you are holding. */
+    active: mine.active || theirs.active || null,
+    streak: Math.max(mine.streak || 0, theirs.streak || 0),
+    lastDay: null, today: null, todayXp: 0, courses: {}
+  };
+  const days = [mine.lastDay, theirs.lastDay].filter(Boolean).sort();
+  out.lastDay = days.length ? days[days.length - 1] : null;
+  /* Today's XP belongs to a day. On the same day each device has seen part of
+     it and the larger stands; a stale day is dropped rather than carried. */
+  if (mine.today && mine.today === theirs.today) {
+    out.today = mine.today;
+    out.todayXp = Math.max(mine.todayXp || 0, theirs.todayXp || 0);
+  } else {
+    const newer = (theirs.today || "") > (mine.today || "") ? theirs : mine;
+    out.today = newer.today || null;
+    out.todayXp = newer.todayXp || 0;
+  }
+  LANGS.forEach(function(lg){
+    out.courses[lg] = mergeCourse((mine.courses || {})[lg], (theirs.courses || {})[lg]);
+  });
+  if (out.active && LANGS.indexOf(out.active) === -1) out.active = null;
+  return out;
+}
+
+/* ---- talking to the server ---- */
+function syncUrl(){ return String(sync.url || "").trim().replace(/\/+$/, ""); }
+function syncOn(){ return !!(sync.code && syncUrl()); }
+
+let syncing = false;
+/* Always read before writing, so a device that has been away adds to what is
+   there instead of flattening it. The merge can run with a lesson open: the
+   copy being answered into has the most answers for those words, so it is the
+   copy that wins them. */
+function syncNow(then){
+  const done = then || function(){ if (!sess) render(); };
+  if (!syncOn() || syncing || typeof fetch !== "function") { done(false); return; }
+  syncing = true;
+  sync.err = "";
+  const where = syncUrl() + "/v1/" + sync.code;
+  fetch(where, { cache: "no-store" })
+    .then(function(r){
+      if (r.status === 404) return null;     /* first device to use this code */
+      if (!r.ok) throw new Error("http " + r.status);
+      return r.json();
+    })
+    .then(function(got){
+      if (got && got.state) { S = mergeState(S, got.state); save(); }
+      return fetch(where, {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ state: S })
+      });
+    })
+    .then(function(r){
+      if (!r.ok) throw new Error("http " + r.status);
+      sync.at = Date.now();
+      sync.err = "";
+      saveSync();
+      syncing = false;
+      done(true);
+    })
+    .catch(function(e){
+      sync.err = String((e && e.message) || e);
+      saveSync();
+      syncing = false;
+      done(false);
+    });
+}
+
+function syncSays(){
+  if (!sync.err) return "";
+  if (sync.err === "badcode") return "That is not a code. They are twelve letters and numbers, in three groups.";
+  if (sync.err.indexOf("413") > -1) return "Your progress is too large for the server to hold.";
+  if (sync.err.indexOf("400") > -1) return "The server would not take that code.";
+  if (sync.err.indexOf("http") > -1) return "The server answered with an error (" + esc(sync.err) + ").";
+  return "Could not reach the server. Nothing is lost \u2014 it will go across next time.";
+}
+
+function syncWhen(at){
+  const s = Math.round((Date.now() - at) / 1000);
+  if (s < 90) return "a moment ago";
+  const mins = Math.round(s / 60);
+  if (mins < 60) return mins + (mins === 1 ? " minute ago" : " minutes ago");
+  const hrs = Math.round(s / 3600);
+  if (hrs < 24) return hrs + (hrs === 1 ? " hour ago" : " hours ago");
+  const days = Math.round(s / 86400);
+  return days + (days === 1 ? " day ago" : " days ago");
 }
 
 /* ============================== HELPERS ============================== */
@@ -1640,6 +1836,8 @@ function finish(){
   sess.state = "done";
   sess.gained = gained;
   save();
+  /* The moment there is something new to carry across. */
+  syncNow(function(){});
   render();
 }
 
@@ -1700,9 +1898,16 @@ function viewPicker(){
                          : "Welcome to Linguae. Which language shall we begin with?") + '</p>'
     + '<div class="pick">' + rows + '</div>'
     + '<p style="font-size:13px">Courses are taught from English, except English itself, which is taught from Portuguese. Each keeps its own progress.</p>'
+    /* A device that has never been used here is most likely the second one,
+       and the panel otherwise lives behind a course that has to be picked
+       first -- which is a strange thing to ask of someone whose course is
+       already chosen, on the other device. Once it syncs, that choice
+       arrives with everything else and this screen is gone. */
+    + (S.lastDay ? "" : syncCard())
     + '</div>';
 }
 function wirePicker(){
+  wireSync();
   app.querySelectorAll("[data-lang]").forEach(function(b){
     b.addEventListener("click", function(){
       S.active = b.getAttribute("data-lang"); page = "learn"; save(); render();
@@ -2036,6 +2241,7 @@ function pageProgress(){
       + '<article class="card card--soft"><h3>How review works</h3>'
       + '<p style="font-size:14px;margin-top:6px">Every answer moves a word along: one day, then three, seven, '
       + 'sixteen and thirty-five. Miss it and it steps back two and returns in the same session.</p></article>'
+      + syncCard()
       + '<button class="btn btn--quiet btn--full" id="reset">Reset ' + esc(c.name) + ' progress</button>';
   }
 
@@ -2050,6 +2256,48 @@ function pageProgress(){
              + ic("arrow_forward", "ms--sm") + '</button>' : "")
     + '</div><img src="assets/leon-progress.webp" alt="Leon, the Linguae chameleon, climbing towards a flag"></section>'
     + tabs + body + '</div>';
+}
+
+/* One card, three states: no server to talk to, a server but no code, and
+   syncing. Each one asks for the single next thing and says nothing else. */
+function syncCard(){
+  const head = '<article class="card"><h3>Your devices</h3>';
+  const err = sync.err ? '<p class="hint syncwarn">' + syncSays() + '</p>' : "";
+
+  if (!syncUrl()) {
+    return head
+      + '<p class="hint">Progress lives in this browser. To carry it to your phone it needs '
+      + 'somewhere both can reach: a small free server you run yourself, which '
+      + '<code>sync/README.md</code> in the repository sets up in a few minutes.</p>'
+      + '<input class="input input--line" id="syncurl" autocomplete="off" spellcheck="false" '
+      + 'placeholder="https://linguae-sync.yourname.workers.dev" value="' + esc(sync.url) + '">'
+      + '<button class="btn btn--full" id="syncsave" style="margin-top:10px">Save the address</button>'
+      + err + '</article>';
+  }
+
+  if (!sync.code) {
+    return head
+      + '<p class="hint">This device is on its own so far. Make a code here and type it on your '
+      + 'phone, or bring the code your phone already has. Keep it to yourself: the code is the '
+      + 'key to your progress.</p>'
+      + '<button class="btn btn--primary btn--full" id="syncnew" style="margin-top:12px">Create a code</button>'
+      + '<p class="hint" style="margin-top:16px">Already have one from another device?</p>'
+      + '<input class="input input--line" id="synccode" autocomplete="off" spellcheck="false" '
+      + 'autocapitalize="off" placeholder="abcd-1234-efgh">'
+      + '<button class="btn btn--full" id="syncjoin" style="margin-top:10px">Use this code</button>'
+      + err + '</article>';
+  }
+
+  return head
+    + '<p class="hint">Type this into the same panel on your other device.</p>'
+    + '<p class="synccode">' + esc(sync.code) + '</p>'
+    + '<p class="hint">' + (syncing ? "Syncing\u2026"
+        : (sync.at ? "Last synced " + syncWhen(sync.at) : "Not synced yet")) + '</p>'
+    + err
+    + '<div class="row" style="gap:10px;margin-top:14px">'
+    + '<button class="btn btn--primary" id="syncgo"' + (syncing ? " disabled" : "") + '>Sync now</button>'
+    + '<button class="btn btn--quiet" id="syncoff">Stop on this device</button></div>'
+    + '</article>';
 }
 
 /* ---------- wiring for the shell pages ---------- */
@@ -2086,10 +2334,60 @@ function wireShell(){
       if (l) startLesson(l);
     });
   });
+  wireSync();
   const rs = document.getElementById("reset");
   if (rs) rs.addEventListener("click", function(){
     if (rs.dataset.armed) { S.courses[S.active] = freshCourse(); save(); render(); }
     else { rs.dataset.armed = "1"; rs.textContent = "Tap again to erase this course"; rs.classList.add("btn--coral"); }
+  });
+}
+
+function wireSync(){
+  const save1 = document.getElementById("syncsave");
+  if (save1) save1.addEventListener("click", function(){
+    const v = (document.getElementById("syncurl") || {}).value || "";
+    sync.url = String(v).trim();
+    sync.err = "";
+    saveSync();
+    render();
+  });
+  const mk = document.getElementById("syncnew");
+  if (mk) mk.addEventListener("click", function(){
+    sync.code = newCode();
+    sync.at = 0;
+    sync.err = "";
+    saveSync();
+    syncNow();
+    render();
+  });
+  const join = document.getElementById("syncjoin");
+  if (join) join.addEventListener("click", function(){
+    const code = tidyCode((document.getElementById("synccode") || {}).value);
+    if (!code) {
+      /* Said here rather than through the server, which never sees it. */
+      sync.err = "badcode";
+      saveSync();
+      render();
+      return;
+    }
+    sync.code = code;
+    sync.at = 0;
+    sync.err = "";
+    saveSync();
+    syncNow();
+    render();
+  });
+  const go = document.getElementById("syncgo");
+  if (go) go.addEventListener("click", function(){ syncNow(); render(); });
+  const off = document.getElementById("syncoff");
+  if (off) off.addEventListener("click", function(){
+    /* Only this device stops. What is on the server stays where it is, and
+       nothing here is erased: the same code brings it back. */
+    sync.code = "";
+    sync.at = 0;
+    sync.err = "";
+    saveSync();
+    render();
   });
 }
 
@@ -2509,6 +2807,8 @@ if (canSpeak) {
 
 loadClips();
 render();
+/* Whatever the other device did since this one last looked. */
+syncNow();
 </script>
 </body>
 </html>
