@@ -194,6 +194,9 @@ main{flex:1;width:100%;max-width:1200px;margin:0 auto;padding-block:28px 64px;
 .stat-icon.mint{background:var(--tile-mint);color:var(--color-primary-ink)}
 .stat-icon.gold{background:var(--tile-gold);color:var(--color-accent-ink)}
 .stat-icon.coral{background:var(--tile-coral);color:var(--color-coral-ink)}
+/* The flame is lit by today's work, not by the number beside it, so it has a
+   cold state and the gold tile has a grey twin. */
+.stat-icon.cold{background:var(--color-raise);color:var(--color-text-muted)}
 .stat .label{font-size:12.5px;font-weight:600;color:var(--color-text-muted)}
 .stat strong{font-family:var(--font-heading);font-weight:700;font-size:27px;line-height:1.2;margin:4px 0}
 .stat p{font-size:12.5px;color:var(--color-text-muted)}
@@ -481,6 +484,8 @@ main{flex:1;width:100%;max-width:1200px;margin:0 auto;padding-block:28px 64px;
 .counters{display:flex;align-items:center;gap:14px}
 .counter{display:inline-flex;align-items:center;gap:6px;font-weight:700;font-variant-numeric:tabular-nums;
   font-size:14.5px}
+.flame{color:var(--color-accent-ink)}
+.flame--cold{color:var(--color-text-muted)}
 .medalrow{display:flex;gap:8px;margin-bottom:12px}
 .medalrow .medal{width:44px;height:44px;margin:0;border-width:3px}
 .medalrow .medal .ms{font-size:21px}
@@ -876,6 +881,19 @@ function addXp(n){
   prog().xp += n;
   if (S.today !== today()) { S.today = today(); S.todayXp = 0; }
   S.todayXp += n;
+}
+/* A streak survives the night, but it is not yet *kept*: the number beside the
+   flame is the work of the days before, and the fire is today's. So arriving in
+   the morning finds it grey, and a finished lesson lights it. The state is in
+   the label as well as the colour, since greyness alone is nothing to a screen
+   reader and not much to some eyes. */
+function studiedToday(){ return S.lastDay === today(); }
+function flame(outer, cls){
+  const lit = studiedToday();
+  const says = "Day streak: " + S.streak + (lit ? ", kept today" : ", not kept yet today");
+  return '<span class="' + outer + ' flame' + (lit ? "" : " flame--cold")
+    + '" title="' + says + '" aria-label="' + says + '">'
+    + ic("local_fire_department", cls || "ms--sm") + S.streak + '</span>';
 }
 function touchStreak(){
   const t = today();
@@ -1963,8 +1981,7 @@ function shell(){
     + '<div class="counters">'
     + '<button class="pill" id="switch" title="Change course">'
     + flagTile(S.active) + '<span class="pill__name">' + esc(c.name) + '</span></button>'
-    + '<span class="counter" style="color:var(--color-accent-ink)" title="Day streak">'
-    + ic("local_fire_department", "ms--sm") + S.streak + '</span>'
+    + flame("counter")
     + '<span class="counter" style="color:var(--color-primary-ink)" title="Total XP">'
     + ic("bolt", "ms--sm") + prog().xp + '</span>'
     + '<span class="counter" style="color:var(--color-coral-ink)" title="Lives refill each lesson">'
@@ -1993,9 +2010,8 @@ function pageLearn(){
   const due = dueItems().length;
   const next = nextLesson();
   const unit = unitOf(next);
-  const studiedToday = S.lastDay === today();
   const mood = S.todayXp >= DAILY_GOAL ? "celebrating"
-             : (studiedToday ? "happy" : (lessonsStarted() ? "resting" : "curious"));
+             : (studiedToday() ? "happy" : (lessonsStarted() ? "resting" : "curious"));
   const goalPct = Math.min(100, Math.round(S.todayXp / DAILY_GOAL * 100));
   const earned = achEarned();
 
@@ -2043,7 +2059,7 @@ function pageLearn(){
   }).join("");
 
   const rail = '<aside class="rail">'
-    + '<article class="card"><h4>' + (studiedToday ? "Good to see you again" : "Next up") + '</h4>'
+    + '<article class="card"><h4>' + (studiedToday() ? "Good to see you again" : "Next up") + '</h4>'
     + '<strong style="font-family:var(--font-heading);font-size:18px;display:block">' + esc(next.title) + '</strong>'
     + '<p class="muted" style="font-size:13px">' + esc(unit.title) + ' &middot; '
     + (next.kind === "w" ? "vocabulary" : "sentences") + '</p>'
@@ -2055,8 +2071,7 @@ function pageLearn(){
     + '<article class="card"><h4>Daily goal</h4>'
     + '<div class="row" style="justify-content:space-between">'
     + '<strong style="font-family:var(--font-heading);font-size:18px">' + S.todayXp + ' / ' + DAILY_GOAL + ' XP</strong>'
-    + '<span class="counter" style="color:var(--color-accent-ink)">' + ic("local_fire_department", "ms--sm")
-    + S.streak + '</span></div>'
+    + flame("counter") + '</div>'
     + progressBar(goalPct, "Daily goal")
     + '<p class="muted" style="font-size:12.5px">'
     + (goalPct >= 100 ? "Done for today. Anything more is a bonus." : "A lesson is worth 10 to 15 XP.")
@@ -2227,8 +2242,10 @@ function pageProgress(){
     body = '<section class="stats">'
       + '<article class="card stat"><div class="stat-icon mint">' + ic("bolt") + '</div>'
       + '<div class="label">Total XP</div><strong class="num">' + p.xp + '</strong></article>'
-      + '<article class="card stat"><div class="stat-icon gold">' + ic("local_fire_department") + '</div>'
-      + '<div class="label">Day streak</div><strong class="num">' + S.streak + '</strong></article>'
+      + '<article class="card stat"><div class="stat-icon ' + (studiedToday() ? "gold" : "cold") + '">'
+      + ic("local_fire_department") + '</div>'
+      + '<div class="label">Day streak</div><strong class="num">' + S.streak + '</strong>'
+      + (studiedToday() ? "" : '<p>Not kept yet today</p>') + '</article>'
       + '<article class="card stat"><div class="stat-icon mint">' + ic("menu_book") + '</div>'
       + '<div class="label">Words learned</div><strong class="num">' + learnedCount() + '</strong></article>'
       + '<article class="card stat"><div class="stat-icon coral">' + ic("exercise") + '</div>'
@@ -2756,7 +2773,7 @@ function viewDone(){
     + '<div class="chips">'
     + '<span class="chipstat" style="color:var(--color-primary-ink)">' + ic("bolt", "ms--sm") + '+' + sess.gained + ' XP</span>'
     + '<span class="chipstat">' + ic("percent", "ms--sm") + acc + '%</span>'
-    + '<span class="chipstat" style="color:var(--color-accent-ink)">' + ic("local_fire_department", "ms--sm") + S.streak + '</span>'
+    + flame("chipstat")
     + '</div>' + toasts
     + (sess.mode === "lesson" && cr < 5 ? '<button class="btn btn--primary btn--full" id="again">Practise it again</button>' : "")
     + '<button class="btn ' + (sess.mode === "lesson" && cr < 5 ? "btn--outline" : "btn--primary")

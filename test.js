@@ -123,6 +123,7 @@ const EXPORTS = `
   AUDIO: AUDIO, clipFor: clipFor, sayItem: sayItem, canHear: canHear, FLAGS: FLAGS,
   courseHasAudio: courseHasAudio,
   pageAchievements: pageAchievements, pageProgress: pageProgress, achEarned: achEarned,
+  studiedToday: studiedToday, flame: flame, shell: shell,
   mergeState: mergeState, mergeCourse: mergeCourse, mergeSrs: mergeSrs,
   tidyCode: tidyCode, newCode: newCode, syncNow: syncNow, syncCard: syncCard,
   syncSays: syncSays, syncWhen: syncWhen, syncOn: syncOn, viewPicker: viewPicker,
@@ -1818,6 +1819,72 @@ function daysAgo(n) {
   return stamp(d);
 }
 function yesterday() { return daysAgo(1); }
+
+/* The number beside the flame is the days already banked; the fire itself is
+   today. Opening the app the morning after should find it grey, which is the
+   only thing on the page saying today's lesson is still owed. */
+test("the morning after, the fire is cold and the number is not", function () {
+  const a = loadApp();
+  a.setActive("fr");
+  const S = a.state();
+  S.streak = 5;
+  S.lastDay = yesterday();
+
+  assert.strictEqual(a.studiedToday(), false);
+  const top = a.shell();
+  assert.ok(/flame--cold/.test(top), "the flame is drawn cold");
+  assert.ok(/not kept yet today/.test(top),
+    "and says so in words: grey on its own is nothing to a screen reader");
+  assert.ok(/local_fire_department<\/span>5</.test(top),
+    "five days were earned and are still shown");
+
+  const css = fs.readFileSync(PAGE, "utf8");
+  assert.ok(/\.flame\{color:var\(--color-accent-ink\)\}/.test(css),
+    "a lit flame is the accent gold");
+  assert.ok(/\.flame--cold\{color:var\(--color-text-muted\)\}/.test(css),
+    "and a cold one is the muted grey");
+});
+
+test("finishing a lesson lights it", function () {
+  const a = loadApp();
+  a.setActive("fr");
+  freshSrs(a);
+  const S = a.state();
+  S.streak = 5;
+  S.lastDay = yesterday();
+  assert.ok(/flame--cold/.test(a.shell()), "cold to begin with");
+
+  playLesson(a);
+  assert.strictEqual(a.studiedToday(), true);
+  const top = a.shell();
+  assert.ok(!/flame--cold/.test(top), "the lesson lit it");
+  assert.ok(/, kept today/.test(top), "and the label followed the colour");
+  assert.ok(/local_fire_department<\/span>6</.test(top), "on a sixth day");
+});
+
+test("the Progress page greys the flame's tile as well", function () {
+  const a = loadApp();
+  a.setActive("fr");
+  const S = a.state();
+  S.streak = 5;
+  S.lastDay = yesterday();
+
+  const tileOf = function (html) {
+    const m = html.match(/stat-icon (\w+)"><span class="ms" aria-hidden="true">local_fire_department/);
+    assert.ok(m, "no flame tile on the Progress page");
+    return m[1];
+  };
+
+  const cold = a.pageProgress();
+  assert.strictEqual(tileOf(cold), "cold", "a grey tile, not the gold one");
+  assert.ok(/Not kept yet today/.test(cold), "and the card says why");
+  assert.ok(/>5</.test(cold), "the five days are still on the card");
+
+  a.touchStreak();
+  const lit = a.pageProgress();
+  assert.strictEqual(tileOf(lit), "gold");
+  assert.ok(!/Not kept yet today/.test(lit), "and the note goes once it is kept");
+});
 
 /* ---------- course content ---------- */
 
