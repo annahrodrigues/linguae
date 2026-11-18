@@ -28,7 +28,7 @@ Pages from building anything and has it copy them across as they are.
 
 | | |
 |---|---|
-| **Courses** | 7 courses, 7 units and 18 lessons each, 144 words and phrases per course. Basics runs to six lessons and the units after it to two apiece. Spanish, French, German, Italian, Latin and Russian are taught from English; English is taught from Portuguese |
+| **Courses** | 7 courses, 7 units and 26 lessons each, 208 words and phrases per course. Basics, People and Food & travel run to six lessons each, the units after them to two apiece. Spanish, French, German, Italian, Latin and Russian are taught from English; English is taught from Portuguese |
 | **Exercises** | 7 kinds: match the pairs, pick the translation in either direction, listen and transcribe, build from a word bank, free typing, and say it out loud |
 | **Keyboard** | A to D pick a lettered option; in the word bank, typing a word lays its piece down as soon as only one piece can be meant, a space settles for the word as typed where something longer begins the same way, and backspace takes back the letters first and then the last piece; Enter checks |
 | **Marking** | accents and punctuation are normalised, and a one-letter typo counts as correct, with a note |
@@ -170,6 +170,11 @@ beginners' unit teaches is not: *man*, *woman*, *and*, *with*, *who* and the
 sentences a learner can make from them are the common property of every course
 that has ever taught a language. Each lesson here is ten words, or six phrases
 built from words the unit has already taught -- a rule the tests check.
+
+A course may teach one word twice over, because a language does: French says
+*la fille* for the girl and for the daughter, German *die Frau* for the woman
+and the wife. A question never offers both, on either side, or one of two right
+answers would be marked wrong.
 
 ## What the pronunciation drill really measures
 

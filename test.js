@@ -730,7 +730,7 @@ test("the English course puts Portuguese on the known side", function () {
 test("every Russian item carries a romanisation", function () {
   const a = loadApp();
   const items = a.COURSES.ru.items;
-  assert.strictEqual(items.length, 144);
+  assert.strictEqual(items.length, 208);
   items.forEach(function (it) {
     assert.ok(it.rom && it.rom.trim(), it.id + " (" + it.en + ") has no romanisation");
     assert.ok(/[\u0400-\u04FF]/.test(it.tgt), it.id + " is not written in Cyrillic");
@@ -2298,17 +2298,63 @@ test("the Progress page greys the flame's tile as well", function () {
 
 /* ---------- course content ---------- */
 
+/* ---------- a question never offers the same word twice ---------- */
+
+test("no two options read the same, on either side", function () {
+  const a = loadApp({ voices: [NEURAL_FR] });
+  /* French says la fille for the girl and for the daughter. A question that
+     put both on the table would mark one of two right answers wrong -- and
+     "what does la fille mean?" would do it the other way round. */
+  a.LANGS.forEach(function (lg) {
+    a.setActive(lg);
+    a.prog().srs = {}; a.prog().crowns = {};
+    const c = a.course();
+    c.items.forEach(function (item) {
+      ["pick_tgt", "pick_en", "listen"].forEach(function (kind) {
+        const ex = a.makeExercise(item, 2, c, true, kind);
+        const tgt = {}, en = {};
+        ex.options.forEach(function (o) {
+          const t = a.loose(o.tgt), e = a.norm(o.en);
+          assert.ok(!tgt[t], lg + "/" + item.id + " (" + kind + ") offers " + o.tgt + " twice");
+          assert.ok(!en[e], lg + "/" + item.id + " (" + kind + ") offers " + o.en + " twice");
+          tgt[t] = en[e] = true;
+        });
+        assert.strictEqual(ex.options.length, 4, lg + "/" + item.id + " lost an option");
+        assert.ok(ex.options.filter(function (o) { return o.id === item.id; }).length === 1,
+          lg + "/" + item.id + " is not among its own options");
+      });
+    });
+  });
+});
+
+test("a word a course teaches twice is still offered once", function () {
+  const a = loadApp();
+  a.setActive("fr");
+  a.prog().srs = {}; a.prog().crowns = {};
+  const c = a.course();
+  const girl = c.items.filter(function (it) { return it.id === "fr-14-3"; })[0];
+  const daughter = c.items.filter(function (it) { return it.id === "fr-2-5"; })[0];
+  assert.ok(girl && daughter, "the two readings of la fille should both be taught");
+  assert.strictEqual(girl.tgt, daughter.tgt, "and they are the same word");
+
+  for (let i = 0; i < 40; i++) {
+    const ex = a.makeExercise(girl, 2, c, false, "pick_en");
+    assert.strictEqual(ex.options.filter(function (o) { return o.id === daughter.id; }).length, 0,
+      "daughter is also what la fille means, so it cannot be a wrong answer");
+  }
+});
+
 test("every course carries the same shape", function () {
   const a = loadApp();
   eq(a.LANGS, ["es", "fr", "de", "it", "la", "ru", "en"]);
   a.LANGS.forEach(function (lg) {
     const c = a.COURSES[lg];
     assert.strictEqual(c.units.length, 7, lg + " should have seven units");
-    /* Basics runs to six lessons; the units after it are still a pair each. */
-    eq(c.units.map(function (u) { return u.lessons.length; }), [6, 2, 2, 2, 2, 2, 2],
+    /* The first three units run to six lessons; the rest are still a pair. */
+    eq(c.units.map(function (u) { return u.lessons.length; }), [6, 6, 6, 2, 2, 2, 2],
        lg + " has the wrong number of lessons in a unit");
-    assert.strictEqual(c.lessons.length, 18, lg + " should have eighteen lessons");
-    assert.strictEqual(c.items.length, 144, lg + " should have 144 items");
+    assert.strictEqual(c.lessons.length, 26, lg + " should have twenty-six lessons");
+    assert.strictEqual(c.items.length, 208, lg + " should have 208 items");
     c.lessons.forEach(function (l) {
       assert.ok(l.kind === "w" || l.kind === "p", "a lesson is words or phrases");
       /* Lessons alternate: ten words, then six phrases built from them. */
@@ -2326,7 +2372,7 @@ test("every course carries the same shape", function () {
         lg + "/" + u.id + " should teach the words before the phrases made of them");
     });
     const vocab = c.lessons.filter(function (l) { return l.kind === "w"; });
-    assert.strictEqual(vocab.length, 9, lg + " should have nine vocabulary lessons");
+    assert.strictEqual(vocab.length, 13, lg + " should have thirteen vocabulary lessons");
     vocab.forEach(function (l) {
       assert.ok(l.items.length >= 5, lg + "/" + l.id + " cannot fill a five-pair match");
     });
@@ -2359,8 +2405,14 @@ test("the lessons that were there before keep the ids progress was saved under",
   eq(a.COURSES.fr.units[0].lessons.map(function (l) { return l.id; }),
      ["fr-0", "fr-1", "fr-14", "fr-15", "fr-16", "fr-17"],
      "Basics keeps its two and carries the four new ones after them");
-  eq(a.COURSES.fr.units[1].lessons.map(function (l) { return l.id; }), ["fr-2", "fr-3"],
-     "and the unit after it is untouched");
+  eq(a.COURSES.fr.units[1].lessons.map(function (l) { return l.id; }),
+     ["fr-2", "fr-3", "fr-18", "fr-19", "fr-20", "fr-21"],
+     "People keeps its two and carries four more");
+  eq(a.COURSES.fr.units[2].lessons.map(function (l) { return l.id; }),
+     ["fr-4", "fr-5", "fr-22", "fr-23", "fr-24", "fr-25"],
+     "and so does Food & travel");
+  eq(a.COURSES.fr.units[3].lessons.map(function (l) { return l.id; }), ["fr-6", "fr-7"],
+     "while the units after them are untouched");
   eq(a.COURSES.fr.units[0].lessons.map(function (l) { return l.title; }),
      ["Greetings", "First phrases", "Everyday words", "Saying who you are",
       "Small words", "Putting it together"],
@@ -2393,6 +2445,39 @@ test("the new lessons are reachable in order, not locked behind the old ones", f
     "and the unit after Basics opens once Basics is done");
 });
 
+/* The same rule for the units that grew: the phrases lean on the words their
+   own unit teaches, and on Basics before it. */
+test("every unit that grew leans on the words it teaches", function () {
+  const a = loadApp();
+  const ADDED = { 0: ["15", "17"], 1: ["19", "21"], 2: ["23", "25"] };
+  a.LANGS.forEach(function (lg) {
+    Object.keys(ADDED).forEach(function (ui) {
+      const unit = a.COURSES[lg].units[+ui];
+      const taught = {};
+      a.COURSES[lg].units.slice(0, +ui + 1).forEach(function (u) {
+        u.lessons.forEach(function (l) {
+          if (l.kind === "w") l.items.forEach(function (it) {
+            a.words(it.tgt).forEach(function (w) { taught[a.loose(w)] = true; });
+          });
+        });
+      });
+      ADDED[ui].forEach(function (n) {
+        const lesson = unit.lessons.filter(function (l) { return l.id === lg + "-" + n; })[0];
+        assert.ok(lesson, lg + " has no lesson " + n);
+        const met = {};
+        lesson.items.forEach(function (it) {
+          a.words(it.tgt).forEach(function (w) {
+            if (taught[a.loose(w)]) met[a.loose(w)] = true;
+          });
+        });
+        assert.ok(Object.keys(met).length >= 4,
+          lg + "/" + lesson.id + " leans on only " + Object.keys(met).length
+          + " of the words taught before it");
+      });
+    });
+  });
+});
+
 test("the new phrases in Basics are built from the words Basics teaches", function () {
   const a = loadApp();
   a.LANGS.forEach(function (lg) {
@@ -2403,11 +2488,11 @@ test("the new phrases in Basics are built from the words Basics teaches", functi
         a.words(it.tgt).forEach(function (w) { taught[a.loose(w)] = true; });
       });
     });
-    /* Only the four that were added: the two that came before lean on words
-       the course never lists on its own. Four distinct words, not a share of
-       the whole phrase -- a sentence is mostly the grammar holding it up, and
-       a course that only ever said what it had already taught could not make
-       a sentence at all. */
+    /* Only the lessons that were added: the ones that came before lean on
+       words the course never lists on its own. Four distinct words, not a
+       share of the whole phrase -- a sentence is mostly the grammar holding it
+       up, and a course that only ever said what it had already taught could
+       not make a sentence at all. */
     ["15", "17"].forEach(function (n) {
       const lesson = basics.lessons.filter(function (l) { return l.id === lg + "-" + n; })[0];
       assert.ok(lesson, lg + " has no lesson " + n);

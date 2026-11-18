@@ -596,10 +596,18 @@ const UNIT_META = [
              { title:"Putting it together", kind:"p", set:17 }] },
   { id:"u2", title:"People",        caption:"Unit 2", tint:"#1D7A5F", deep:"#17634E",
     lessons:[{ title:"Family", kind:"w", set:2 },
-             { title:"About you", kind:"p", set:3 }] },
+             { title:"About you", kind:"p", set:3 },
+             { title:"More family", kind:"w", set:18 },
+             { title:"Your family", kind:"p", set:19 },
+             { title:"Work", kind:"w", set:20 },
+             { title:"What they do", kind:"p", set:21 }] },
   { id:"u3", title:"Food & travel", caption:"Unit 3", tint:"#1D7A5F", deep:"#17634E",
     lessons:[{ title:"Food & drink", kind:"w", set:4 },
-             { title:"Out and about", kind:"p", set:5 }] },
+             { title:"Out and about", kind:"p", set:5 },
+             { title:"More food", kind:"w", set:22 },
+             { title:"At the meal", kind:"p", set:23 },
+             { title:"At the table", kind:"w", set:24 },
+             { title:"In the kitchen", kind:"p", set:25 }] },
   { id:"u4", title:"Everyday life", caption:"Unit 4", tint:"#1D7A5F", deep:"#17634E",
     lessons:[{ title:"Time words", kind:"w", set:6 },
              { title:"Daily sentences", kind:"p", set:7 }] },
@@ -645,6 +653,15 @@ const COURSES = {
       [["I am a student.","Soy estudiante."],["She is a teacher.","Ella es maestra."],["This is my book.","Este es mi libro."],["The woman has a book.","La mujer tiene un libro."],["I speak one language.","Hablo un idioma."],["What is this?","\u00bfQu\u00e9 es esto?"]],
       [["and","y"],["or","o"],["but","pero"],["with","con"],["very","muy"],["also","tambi\u00e9n"],["here","aqu\u00ed"],["there","all\u00ed"],["who","qui\u00e9n"],["what","qu\u00e9"]],
       [["The man and the woman.","El hombre y la mujer."],["Here is my book.","Aqu\u00ed est\u00e1 mi libro."],["Who is here?","\u00bfQui\u00e9n est\u00e1 aqu\u00ed?"],["The teacher is with the girl.","La maestra est\u00e1 con la ni\u00f1a."],["I speak with the teacher.","Hablo con el maestro."],["The girl is also a student.","La ni\u00f1a tambi\u00e9n es estudiante."]]
+    ,
+      [["family","familia"],["parents","padres"],["grandfather","abuelo"],["uncle","t\u00edo"],["aunt","t\u00eda"],["cousin","primo"],["baby","beb\u00e9"],["neighbour","vecino"],["people","gente"],["age","edad"]],
+      [["This is my family.","Esta es mi familia."],["My grandfather is here.","Mi abuelo est\u00e1 aqu\u00ed."],["I have two cousins.","Tengo dos primos."],["The baby is with my aunt.","El beb\u00e9 est\u00e1 con mi t\u00eda."],["My neighbour is a teacher.","Mi vecino es maestro."],["My uncle and my aunt.","Mi t\u00edo y mi t\u00eda."]],
+      [["doctor","m\u00e9dico"],["nurse","enfermera"],["cook","cocinero"],["driver","conductor"],["farmer","granjero"],["artist","artista"],["writer","escritor"],["singer","cantante"],["soldier","soldado"],["worker","trabajador"]],
+      [["My father is a doctor.","Mi padre es m\u00e9dico."],["My sister is a nurse.","Mi hermana es enfermera."],["The cook is my uncle.","El cocinero es mi t\u00edo."],["My cousin is a singer.","Mi primo es cantante."],["Who is the driver?","\u00bfQui\u00e9n es el conductor?"],["The artist is my neighbour.","El artista es mi vecino."]],
+      [["fish","pescado"],["soup","sopa"],["salad","ensalada"],["fruit","fruta"],["vegetable","verdura"],["sugar","az\u00facar"],["salt","sal"],["butter","mantequilla"],["tea","t\u00e9"],["wine","vino"]],
+      [["I would like a tea.","Me gustar\u00eda un t\u00e9."],["The soup is very good.","La sopa est\u00e1 muy buena."],["I eat fish.","Como pescado."],["She drinks wine.","Ella bebe vino."],["The salad is with cheese.","La ensalada es con queso."],["Do you have fruit?","\u00bfTienes fruta?"]],
+      [["table","mesa"],["cup","taza"],["knife","cuchillo"],["fork","tenedor"],["spoon","cuchara"],["plate","plato"],["food","comida"],["dinner","cena"],["kitchen","cocina"],["restaurant","restaurante"]],
+      [["The food is on the table.","La comida est\u00e1 en la mesa."],["Dinner is in the kitchen.","La cena est\u00e1 en la cocina."],["My plate is here.","Mi plato est\u00e1 aqu\u00ed."],["Where is my spoon?","\u00bfD\u00f3nde est\u00e1 mi cuchara?"],["The cup and the plate.","La taza y el plato."],["I eat with a fork.","Como con un tenedor."]]
     ]},
 
   fr: { name:"French", code:"FR", tint:"#2c5fd0", tts:"fr-FR", nativeName:"Français",
@@ -673,10 +690,19 @@ const COURSES = {
       [["big","grand"],["small","petit"],["good","bon"],["bad","mauvais"],["new","nouveau"],["old","vieux"],["beautiful","beau"],["happy","heureux"],["tired","fatigué"],["difficult","difficile"]],
       [["I am tired.","Je suis fatigué."],["She is happy.","Elle est heureuse."],["The book is very good.","Le livre est très bon."],["This is too difficult.","C'est trop difficile."],["We are not sad.","Nous ne sommes pas tristes."],["I like this city.","J'aime cette ville."]]
     ,
-      [["man","homme"],["woman","femme"],["boy","gar\u00e7on"],["girl","fille"],["name","nom"],["language","langue"],["word","mot"],["book","livre"],["teacher","professeur"],["student","\u00e9tudiant"]],
+      [["man","l'homme"],["woman","la femme"],["boy","le gar\u00e7on"],["girl","la fille"],["name","le nom"],["language","la langue"],["word","le mot"],["book","le livre"],["teacher","le professeur"],["student","l'\u00e9tudiant"]],
       [["I am a student.","Je suis \u00e9tudiant."],["She is a teacher.","Elle est professeur."],["This is my book.","C'est mon livre."],["The woman has a book.","La femme a un livre."],["I speak one language.","Je parle une langue."],["What is this?","Qu'est-ce que c'est?"]],
       [["and","et"],["or","ou"],["but","mais"],["with","avec"],["very","tr\u00e8s"],["also","aussi"],["here","ici"],["there","l\u00e0"],["who","qui"],["what","quoi"]],
       [["The man and the woman.","L'homme et la femme."],["Here is my book.","Voici mon livre."],["Who is here?","Qui est ici?"],["The teacher is with the girl.","Le professeur est avec la fille."],["I speak with the teacher.","Je parle avec le professeur."],["The girl is also a student.","La fille est aussi \u00e9tudiante."]]
+    ,
+      [["family","la famille"],["parents","les parents"],["grandfather","le grand-p\u00e8re"],["uncle","l'oncle"],["aunt","la tante"],["cousin","le cousin"],["baby","le b\u00e9b\u00e9"],["neighbour","le voisin"],["people","les gens"],["age","l'\u00e2ge"]],
+      [["This is my family.","C'est ma famille."],["My grandfather is here.","Mon grand-p\u00e8re est ici."],["I have two cousins.","J'ai deux cousins."],["The baby is with my aunt.","Le b\u00e9b\u00e9 est avec ma tante."],["My neighbour is a teacher.","Mon voisin est professeur."],["My uncle and my aunt.","Mon oncle et ma tante."]],
+      [["doctor","le m\u00e9decin"],["nurse","l'infirmi\u00e8re"],["cook","le cuisinier"],["driver","le chauffeur"],["farmer","le fermier"],["artist","l'artiste"],["writer","l'\u00e9crivain"],["singer","le chanteur"],["soldier","le soldat"],["worker","l'ouvrier"]],
+      [["My father is a doctor.","Mon p\u00e8re est m\u00e9decin."],["My sister is a nurse.","Ma s\u0153ur est infirmi\u00e8re."],["The cook is my uncle.","Le cuisinier est mon oncle."],["My cousin is a singer.","Mon cousin est chanteur."],["Who is the driver?","Qui est le chauffeur?"],["The artist is my neighbour.","L'artiste est mon voisin."]],
+      [["fish","le poisson"],["soup","la soupe"],["salad","la salade"],["fruit","le fruit"],["vegetable","le l\u00e9gume"],["sugar","le sucre"],["salt","le sel"],["butter","le beurre"],["tea","le th\u00e9"],["wine","le vin"]],
+      [["I would like a tea.","Je voudrais un th\u00e9."],["The soup is very good.","La soupe est tr\u00e8s bonne."],["I eat fish.","Je mange du poisson."],["She drinks wine.","Elle boit du vin."],["The salad is with cheese.","La salade est avec du fromage."],["Do you have fruit?","As-tu des fruits?"]],
+      [["table","la table"],["cup","la tasse"],["knife","le couteau"],["fork","la fourchette"],["spoon","la cuill\u00e8re"],["plate","l'assiette"],["food","la nourriture"],["dinner","le d\u00eener"],["kitchen","la cuisine"],["restaurant","le restaurant"]],
+      [["The food is on the table.","La nourriture est sur la table."],["Dinner is in the kitchen.","Le d\u00eener est dans la cuisine."],["My plate is here.","Mon assiette est ici."],["Where is my spoon?","O\u00f9 est ma cuill\u00e8re?"],["The cup and the plate.","La tasse et l'assiette."],["I eat with a fork.","Je mange avec une fourchette."]]
     ]},
 
   de: { name:"German", code:"DE", tint:"#3f3f46", tts:"de-DE", nativeName:"Deutsch",
@@ -692,7 +718,7 @@ const COURSES = {
     sets:[
       [["hello","hallo"],["good morning","guten Morgen"],["good evening","guten Abend"],["good night","gute Nacht"],["thank you","danke"],["please","bitte"],["yes","ja"],["no","nein"],["goodbye","auf Wiedersehen"],["sorry","Entschuldigung"]],
       [["How are you?","Wie geht es dir?"],["I'm fine, thank you.","Mir geht es gut, danke."],["What is your name?","Wie heißt du?"],["My name is Ana.","Ich heiße Ana."],["Nice to meet you.","Freut mich."],["I don't understand.","Ich verstehe nicht."]],
-      [["mother","die Mutter"],["father","der Vater"],["sister","die Schwester"],["brother","der Bruder"],["friend","der Freund"],["daughter","die Tochter"],["son","der Sohn"],["wife","die Frau"],["husband","der Mann"],["grandmother","die Großmutter"]],
+      [["mother","die Mutter"],["father","der Vater"],["sister","die Schwester"],["brother","der Bruder"],["friend","der Freund"],["daughter","die Tochter"],["son","der Sohn"],["wife","die Ehefrau"],["husband","der Ehemann"],["grandmother","die Großmutter"]],
       [["This is my sister.","Das ist meine Schwester."],["I have two brothers.","Ich habe zwei Brüder."],["I live in Berlin.","Ich wohne in Berlin."],["She is my friend.","Sie ist meine Freundin."],["Do you speak English?","Sprichst du Englisch?"],["I am learning German.","Ich lerne Deutsch."]],
       [["water","das Wasser"],["bread","das Brot"],["cheese","der Käse"],["coffee","der Kaffee"],["milk","die Milch"],["apple","der Apfel"],["chicken","das Hähnchen"],["rice","der Reis"],["egg","das Ei"],["meat","das Fleisch"]],
       [["I would like a coffee, please.","Ich möchte einen Kaffee, bitte."],["The bill, please.","Die Rechnung, bitte."],["I am hungry.","Ich habe Hunger."],["Where is the station?","Wo ist der Bahnhof?"],["How much does it cost?","Wie viel kostet das?"],["Can you help me?","Kannst du mir helfen?"]],
@@ -705,10 +731,19 @@ const COURSES = {
       [["big","groß"],["small","klein"],["good","gut"],["bad","schlecht"],["new","neu"],["old","alt"],["beautiful","schön"],["happy","glücklich"],["tired","müde"],["difficult","schwierig"]],
       [["I am tired.","Ich bin müde."],["She is happy.","Sie ist glücklich."],["The book is very good.","Das Buch ist sehr gut."],["This is too difficult.","Das ist zu schwierig."],["We are not sad.","Wir sind nicht traurig."],["I like this city.","Diese Stadt gefällt mir."]]
     ,
-      [["man","Mann"],["woman","Frau"],["boy","Junge"],["girl","M\u00e4dchen"],["name","Name"],["language","Sprache"],["word","Wort"],["book","Buch"],["teacher","Lehrer"],["student","Student"]],
+      [["man","der Mann"],["woman","die Frau"],["boy","der Junge"],["girl","das M\u00e4dchen"],["name","der Name"],["language","die Sprache"],["word","das Wort"],["book","das Buch"],["teacher","der Lehrer"],["student","der Student"]],
       [["I am a student.","Ich bin Student."],["She is a teacher.","Sie ist Lehrerin."],["This is my book.","Das ist mein Buch."],["The woman has a book.","Die Frau hat ein Buch."],["I speak one language.","Ich spreche eine Sprache."],["What is this?","Was ist das?"]],
       [["and","und"],["or","oder"],["but","aber"],["with","mit"],["very","sehr"],["also","auch"],["here","hier"],["there","dort"],["who","wer"],["what","was"]],
       [["The man and the woman.","Der Mann und die Frau."],["Here is my book.","Hier ist mein Buch."],["Who is here?","Wer ist hier?"],["The teacher is with the girl.","Der Lehrer ist mit dem M\u00e4dchen."],["I speak with the teacher.","Ich spreche mit dem Lehrer."],["The girl is also a student.","Das M\u00e4dchen ist auch Studentin."]]
+    ,
+      [["family","die Familie"],["parents","die Eltern"],["grandfather","der Gro\u00dfvater"],["uncle","der Onkel"],["aunt","die Tante"],["cousin","der Cousin"],["baby","das Baby"],["neighbour","der Nachbar"],["people","die Leute"],["age","das Alter"]],
+      [["This is my family.","Das ist meine Familie."],["My grandfather is here.","Mein Gro\u00dfvater ist hier."],["I have two cousins.","Ich habe zwei Cousins."],["The baby is with my aunt.","Das Baby ist mit meiner Tante."],["My neighbour is a teacher.","Mein Nachbar ist Lehrer."],["My uncle and my aunt.","Mein Onkel und meine Tante."]],
+      [["doctor","der Arzt"],["nurse","die Krankenschwester"],["cook","der Koch"],["driver","der Fahrer"],["farmer","der Bauer"],["artist","der K\u00fcnstler"],["writer","der Schriftsteller"],["singer","der S\u00e4nger"],["soldier","der Soldat"],["worker","der Arbeiter"]],
+      [["My father is a doctor.","Mein Vater ist Arzt."],["My sister is a nurse.","Meine Schwester ist Krankenschwester."],["The cook is my uncle.","Der Koch ist mein Onkel."],["My cousin is a singer.","Mein Cousin ist S\u00e4nger."],["Who is the driver?","Wer ist der Fahrer?"],["The artist is my neighbour.","Der K\u00fcnstler ist mein Nachbar."]],
+      [["fish","der Fisch"],["soup","die Suppe"],["salad","der Salat"],["fruit","das Obst"],["vegetable","das Gem\u00fcse"],["sugar","der Zucker"],["salt","das Salz"],["butter","die Butter"],["tea","der Tee"],["wine","der Wein"]],
+      [["I would like a tea.","Ich m\u00f6chte einen Tee."],["The soup is very good.","Die Suppe ist sehr gut."],["I eat fish.","Ich esse Fisch."],["She drinks wine.","Sie trinkt Wein."],["The salad is with cheese.","Der Salat ist mit K\u00e4se."],["Do you have fruit?","Hast du Obst?"]],
+      [["table","der Tisch"],["cup","die Tasse"],["knife","das Messer"],["fork","die Gabel"],["spoon","der L\u00f6ffel"],["plate","der Teller"],["food","das Essen"],["dinner","das Abendessen"],["kitchen","die K\u00fcche"],["restaurant","das Restaurant"]],
+      [["The food is on the table.","Das Essen ist auf dem Tisch."],["Dinner is in the kitchen.","Das Abendessen ist in der K\u00fcche."],["My plate is here.","Mein Teller ist hier."],["Where is my spoon?","Wo ist mein L\u00f6ffel?"],["The cup and the plate.","Die Tasse und der Teller."],["I eat with a fork.","Ich esse mit einer Gabel."]]
     ]},
 
   it: { name:"Italian", code:"IT", tint:"#1A8844", tts:"it-IT", nativeName:"Italiano",
@@ -737,10 +772,19 @@ const COURSES = {
       [["big","grande"],["small","piccolo"],["good","buono"],["bad","cattivo"],["new","nuovo"],["old","vecchio"],["beautiful","bello"],["happy","felice"],["tired","stanco"],["difficult","difficile"]],
       [["I am tired.","Sono stanco."],["She is happy.","Lei è felice."],["The book is very good.","Il libro è molto buono."],["This is too difficult.","Questo è troppo difficile."],["We are not sad.","Non siamo tristi."],["I like this city.","Mi piace questa città."]]
     ,
-      [["man","uomo"],["woman","donna"],["boy","ragazzo"],["girl","ragazza"],["name","nome"],["language","lingua"],["word","parola"],["book","libro"],["teacher","insegnante"],["student","studente"]],
+      [["man","l'uomo"],["woman","la donna"],["boy","il ragazzo"],["girl","la ragazza"],["name","il nome"],["language","la lingua"],["word","la parola"],["book","il libro"],["teacher","l'insegnante"],["student","lo studente"]],
       [["I am a student.","Sono studente."],["She is a teacher.","Lei \u00e8 insegnante."],["This is my book.","Questo \u00e8 il mio libro."],["The woman has a book.","La donna ha un libro."],["I speak one language.","Parlo una lingua."],["What is this?","Che cos'\u00e8 questo?"]],
       [["and","e"],["or","o"],["but","ma"],["with","con"],["very","molto"],["also","anche"],["here","qui"],["there","l\u00e0"],["who","chi"],["what","che"]],
       [["The man and the woman.","L'uomo e la donna."],["Here is my book.","Ecco il mio libro."],["Who is here?","Chi \u00e8 qui?"],["The teacher is with the girl.","L'insegnante \u00e8 con la ragazza."],["I speak with the teacher.","Parlo con l'insegnante."],["The girl is also a student.","Anche la ragazza \u00e8 studentessa."]]
+    ,
+      [["family","la famiglia"],["parents","i genitori"],["grandfather","il nonno"],["uncle","lo zio"],["aunt","la zia"],["cousin","il cugino"],["baby","il bambino"],["neighbour","il vicino"],["people","la gente"],["age","l'et\u00e0"]],
+      [["This is my family.","Questa \u00e8 la mia famiglia."],["My grandfather is here.","Mio nonno \u00e8 qui."],["I have two cousins.","Ho due cugini."],["The baby is with my aunt.","Il bambino \u00e8 con mia zia."],["My neighbour is a teacher.","Il mio vicino \u00e8 insegnante."],["My uncle and my aunt.","Mio zio e mia zia."]],
+      [["doctor","il medico"],["nurse","l'infermiera"],["cook","il cuoco"],["driver","l'autista"],["farmer","il contadino"],["artist","l'artista"],["writer","lo scrittore"],["singer","il cantante"],["soldier","il soldato"],["worker","l'operaio"]],
+      [["My father is a doctor.","Mio padre \u00e8 medico."],["My sister is a nurse.","Mia sorella \u00e8 infermiera."],["The cook is my uncle.","Il cuoco \u00e8 mio zio."],["My cousin is a singer.","Mio cugino \u00e8 cantante."],["Who is the driver?","Chi \u00e8 l'autista?"],["The artist is my neighbour.","L'artista \u00e8 il mio vicino."]],
+      [["fish","il pesce"],["soup","la zuppa"],["salad","l'insalata"],["fruit","la frutta"],["vegetable","la verdura"],["sugar","lo zucchero"],["salt","il sale"],["butter","il burro"],["tea","il t\u00e8"],["wine","il vino"]],
+      [["I would like a tea.","Vorrei un t\u00e8."],["The soup is very good.","La zuppa \u00e8 molto buona."],["I eat fish.","Mangio pesce."],["She drinks wine.","Lei beve vino."],["The salad is with cheese.","L'insalata \u00e8 con il formaggio."],["Do you have fruit?","Hai della frutta?"]],
+      [["table","il tavolo"],["cup","la tazza"],["knife","il coltello"],["fork","la forchetta"],["spoon","il cucchiaio"],["plate","il piatto"],["food","il cibo"],["dinner","la cena"],["kitchen","la cucina"],["restaurant","il ristorante"]],
+      [["The food is on the table.","Il cibo \u00e8 sul tavolo."],["Dinner is in the kitchen.","La cena \u00e8 in cucina."],["My plate is here.","Il mio piatto \u00e8 qui."],["Where is my spoon?","Dov'\u00e8 il mio cucchiaio?"],["The cup and the plate.","La tazza e il piatto."],["I eat with a fork.","Mangio con una forchetta."]]
     ]},
 
   la: { name:"Latin", code:"LA", tint:"#8a6d3b", tts:"it-IT", nativeName:"Lingua Latina",
@@ -774,6 +818,15 @@ const COURSES = {
       [["I am a student.","Discipulus sum."],["She is a teacher.","Magistra est."],["This is my book.","Hic liber meus est."],["The woman has a book.","Fēmina librum habet."],["I speak one language.","Ūnam linguam loquor."],["What is this?","Quid est hoc?"]],
       [["and","et"],["or","aut"],["but","sed"],["with","cum"],["very","valdē"],["also","quoque"],["here","hīc"],["there","ibi"],["who","quis"],["what","quid"]],
       [["The man and the woman.","Vir et fēmina."],["Here is my book.","Hīc est liber meus."],["Who is here?","Quis hīc est?"],["The teacher is with the girl.","Magister cum puellā est."],["I speak with the teacher.","Cum magistrō loquor."],["The girl is also a student.","Puella quoque discipula est."]]
+    ,
+      [["family","familia"],["parents","parentēs"],["grandfather","avus"],["uncle","patruus"],["aunt","amita"],["cousin","cōnsōbrīnus"],["baby","īnfāns"],["neighbour","vīcīnus"],["people","populus"],["age","aetās"]],
+      [["This is my family.","Haec est familia mea."],["My grandfather is here.","Avus meus hīc est."],["I have two cousins.","Duōs cōnsōbrīnōs habeō."],["The baby is with my aunt.","Īnfāns cum amitā meā est."],["My neighbour is a teacher.","Vīcīnus meus magister est."],["My uncle and my aunt.","Patruus meus et amita mea."]],
+      [["doctor","medicus"],["nurse","nūtrīx"],["cook","coquus"],["driver","aurīga"],["farmer","agricola"],["artist","artifex"],["writer","scrīptor"],["singer","cantor"],["soldier","mīles"],["worker","operārius"]],
+      [["My father is a doctor.","Pater meus medicus est."],["My sister is a nurse.","Soror mea nūtrīx est."],["The cook is my uncle.","Coquus patruus meus est."],["My cousin is a singer.","Cōnsōbrīnus meus cantor est."],["Who is the driver?","Quis est aurīga?"],["The artist is my neighbour.","Artifex vīcīnus meus est."]],
+      [["soup","iūs"],["salad","acētāria"],["fruit","frūctus"],["vegetable","holus"],["sugar","saccharum"],["salt","sāl"],["butter","būtȳrum"],["honey","mel"],["olive","olīva"],["pear","pirum"]],
+      [["I would like honey.","Mel velim."],["The soup is very good.","Iūs valdē bonum est."],["I eat vegetables.","Holera edō."],["She drinks water.","Aquam bibit."],["The salad is with cheese.","Acētāria cum cāseō sunt."],["Do you have fruit?","Habēsne frūctum?"]],
+      [["table","mēnsa"],["cup","pōculum"],["knife","culter"],["fork","fuscinula"],["spoon","cochlear"],["plate","patina"],["food","cibus"],["dinner","cēna"],["kitchen","culīna"],["restaurant","caupōna"]],
+      [["The food is on the table.","Cibus in mēnsā est."],["Dinner is in the kitchen.","Cēna in culīnā est."],["My plate is here.","Patina mea hīc est."],["Where is my spoon?","Ubi est cochlear meum?"],["The cup and the plate.","Pōculum et patina."],["I eat with a fork.","Fuscinulā edō."]]
     ]},
 
   ru: { name:"Russian", code:"RU", tint:"#1B4F9C", tts:"ru-RU", nativeName:"\u0420\u0443\u0441\u0441\u043a\u0438\u0439",
@@ -806,6 +859,15 @@ const COURSES = {
       [["I am a student.","\u042f \u0443\u0447\u0435\u043d\u0438\u043a.","Ya uchenik."],["She is a teacher.","\u041e\u043d\u0430 \u0443\u0447\u0438\u0442\u0435\u043b\u044c\u043d\u0438\u0446\u0430.","Ona uchitelnitsa."],["This is my book.","\u042d\u0442\u043e \u043c\u043e\u044f \u043a\u043d\u0438\u0433\u0430.","Eto moya kniga."],["The woman has a book.","\u0423 \u0436\u0435\u043d\u0449\u0438\u043d\u044b \u0435\u0441\u0442\u044c \u043a\u043d\u0438\u0433\u0430.","U zhenshchiny est kniga."],["I know one language.","\u042f \u0437\u043d\u0430\u044e \u043e\u0434\u0438\u043d \u044f\u0437\u044b\u043a.","Ya znayu odin yazyk."],["What is this?","\u0427\u0442\u043e \u044d\u0442\u043e?","Chto eto?"]],
       [["and","\u0438","i"],["or","\u0438\u043b\u0438","ili"],["but","\u043d\u043e","no"],["with","\u0441","s"],["very","\u043e\u0447\u0435\u043d\u044c","ochen"],["also","\u0442\u043e\u0436\u0435","tozhe"],["here","\u0437\u0434\u0435\u0441\u044c","zdes"],["there","\u0442\u0430\u043c","tam"],["who","\u043a\u0442\u043e","kto"],["what","\u0447\u0442\u043e","chto"]],
       [["The man and the woman.","\u041c\u0443\u0436\u0447\u0438\u043d\u0430 \u0438 \u0436\u0435\u043d\u0449\u0438\u043d\u0430.","Muzhchina i zhenshchina."],["Here is my book.","\u0412\u043e\u0442 \u043c\u043e\u044f \u043a\u043d\u0438\u0433\u0430.","Vot moya kniga."],["Who is here?","\u041a\u0442\u043e \u0437\u0434\u0435\u0441\u044c?","Kto zdes?"],["The teacher is with the girl.","\u0423\u0447\u0438\u0442\u0435\u043b\u044c \u0441 \u0434\u0435\u0432\u043e\u0447\u043a\u043e\u0439.","Uchitel s devochkoy."],["I speak with the teacher.","\u042f \u0433\u043e\u0432\u043e\u0440\u044e \u0441 \u0443\u0447\u0438\u0442\u0435\u043b\u0435\u043c.","Ya govoryu s uchitelem."],["The girl is also a student.","\u0414\u0435\u0432\u043e\u0447\u043a\u0430 \u0442\u043e\u0436\u0435 \u0443\u0447\u0435\u043d\u0438\u0446\u0430.","Devochka tozhe uchenitsa."]]
+    ,
+      [["family","\u0441\u0435\u043c\u044c\u044f","semya"],["parents","\u0440\u043e\u0434\u0438\u0442\u0435\u043b\u0438","roditeli"],["grandfather","\u0434\u0435\u0434\u0443\u0448\u043a\u0430","dedushka"],["uncle","\u0434\u044f\u0434\u044f","dyadya"],["aunt","\u0442\u0451\u0442\u044f","tyotya"],["cousin","\u043a\u0443\u0437\u0435\u043d","kuzen"],["baby","\u043c\u0430\u043b\u044b\u0448","malysh"],["neighbour","\u0441\u043e\u0441\u0435\u0434","sosed"],["people","\u043b\u044e\u0434\u0438","lyudi"],["age","\u0432\u043e\u0437\u0440\u0430\u0441\u0442","vozrast"]],
+      [["This is my family.","\u042d\u0442\u043e \u043c\u043e\u044f \u0441\u0435\u043c\u044c\u044f.","Eto moya semya."],["My grandfather is here.","\u041c\u043e\u0439 \u0434\u0435\u0434\u0443\u0448\u043a\u0430 \u0437\u0434\u0435\u0441\u044c.","Moy dedushka zdes."],["I have two cousins.","\u0423 \u043c\u0435\u043d\u044f \u0434\u0432\u0430 \u043a\u0443\u0437\u0435\u043d\u0430.","U menya dva kuzena."],["The baby is with my aunt.","\u041c\u0430\u043b\u044b\u0448 \u0441 \u043c\u043e\u0435\u0439 \u0442\u0451\u0442\u0435\u0439.","Malysh s moyey tyotey."],["My neighbour is a teacher.","\u041c\u043e\u0439 \u0441\u043e\u0441\u0435\u0434 \u0443\u0447\u0438\u0442\u0435\u043b\u044c.","Moy sosed uchitel."],["My uncle and my aunt.","\u041c\u043e\u0439 \u0434\u044f\u0434\u044f \u0438 \u043c\u043e\u044f \u0442\u0451\u0442\u044f.","Moy dyadya i moya tyotya."]],
+      [["doctor","\u0432\u0440\u0430\u0447","vrach"],["nurse","\u043c\u0435\u0434\u0441\u0435\u0441\u0442\u0440\u0430","medsestra"],["cook","\u043f\u043e\u0432\u0430\u0440","povar"],["driver","\u0432\u043e\u0434\u0438\u0442\u0435\u043b\u044c","voditel"],["farmer","\u0444\u0435\u0440\u043c\u0435\u0440","fermer"],["artist","\u0445\u0443\u0434\u043e\u0436\u043d\u0438\u043a","khudozhnik"],["writer","\u043f\u0438\u0441\u0430\u0442\u0435\u043b\u044c","pisatel"],["singer","\u043f\u0435\u0432\u0435\u0446","pevets"],["soldier","\u0441\u043e\u043b\u0434\u0430\u0442","soldat"],["worker","\u0440\u0430\u0431\u043e\u0447\u0438\u0439","rabochiy"]],
+      [["My father is a doctor.","\u041c\u043e\u0439 \u043f\u0430\u043f\u0430 \u0432\u0440\u0430\u0447.","Moy papa vrach."],["My sister is a nurse.","\u041c\u043e\u044f \u0441\u0435\u0441\u0442\u0440\u0430 \u043c\u0435\u0434\u0441\u0435\u0441\u0442\u0440\u0430.","Moya sestra medsestra."],["The cook is my uncle.","\u041f\u043e\u0432\u0430\u0440 \u043c\u043e\u0439 \u0434\u044f\u0434\u044f.","Povar moy dyadya."],["My cousin is a singer.","\u041c\u043e\u0439 \u043a\u0443\u0437\u0435\u043d \u043f\u0435\u0432\u0435\u0446.","Moy kuzen pevets."],["Who is the driver?","\u041a\u0442\u043e \u0432\u043e\u0434\u0438\u0442\u0435\u043b\u044c?","Kto voditel?"],["The artist is my neighbour.","\u0425\u0443\u0434\u043e\u0436\u043d\u0438\u043a \u043c\u043e\u0439 \u0441\u043e\u0441\u0435\u0434.","Khudozhnik moy sosed."]],
+      [["fish","\u0440\u044b\u0431\u0430","ryba"],["soup","\u0441\u0443\u043f","sup"],["salad","\u0441\u0430\u043b\u0430\u0442","salat"],["fruit","\u0444\u0440\u0443\u043a\u0442\u044b","frukty"],["vegetable","\u043e\u0432\u043e\u0449\u0438","ovoshchi"],["sugar","\u0441\u0430\u0445\u0430\u0440","sakhar"],["salt","\u0441\u043e\u043b\u044c","sol"],["butter","\u043c\u0430\u0441\u043b\u043e","maslo"],["tea","\u0447\u0430\u0439","chay"],["wine","\u0432\u0438\u043d\u043e","vino"]],
+      [["I would like a tea.","\u042f \u0445\u043e\u0447\u0443 \u0447\u0430\u0439.","Ya khochu chay."],["The soup is very good.","\u0421\u0443\u043f \u043e\u0447\u0435\u043d\u044c \u0432\u043a\u0443\u0441\u043d\u044b\u0439.","Sup ochen vkusnyy."],["I eat fish.","\u042f \u0435\u043c \u0440\u044b\u0431\u0443.","Ya yem rybu."],["She drinks wine.","\u041e\u043d\u0430 \u043f\u044c\u0451\u0442 \u0432\u0438\u043d\u043e.","Ona pyot vino."],["The salad is with cheese.","\u0421\u0430\u043b\u0430\u0442 \u0441 \u0441\u044b\u0440\u043e\u043c.","Salat s syrom."],["Do you have fruit?","\u0423 \u0432\u0430\u0441 \u0435\u0441\u0442\u044c \u0444\u0440\u0443\u043a\u0442\u044b?","U vas est frukty?"]],
+      [["table","\u0441\u0442\u043e\u043b","stol"],["cup","\u0447\u0430\u0448\u043a\u0430","chashka"],["knife","\u043d\u043e\u0436","nozh"],["fork","\u0432\u0438\u043b\u043a\u0430","vilka"],["spoon","\u043b\u043e\u0436\u043a\u0430","lozhka"],["plate","\u0442\u0430\u0440\u0435\u043b\u043a\u0430","tarelka"],["food","\u0435\u0434\u0430","yeda"],["dinner","\u0443\u0436\u0438\u043d","uzhin"],["kitchen","\u043a\u0443\u0445\u043d\u044f","kukhnya"],["restaurant","\u0440\u0435\u0441\u0442\u043e\u0440\u0430\u043d","restoran"]],
+      [["The food is on the table.","\u0415\u0434\u0430 \u043d\u0430 \u0441\u0442\u043e\u043b\u0435.","Yeda na stole."],["Dinner is in the kitchen.","\u0423\u0436\u0438\u043d \u043d\u0430 \u043a\u0443\u0445\u043d\u0435.","Uzhin na kukhne."],["My plate is here.","\u041c\u043e\u044f \u0442\u0430\u0440\u0435\u043b\u043a\u0430 \u0437\u0434\u0435\u0441\u044c.","Moya tarelka zdes."],["Where is my spoon?","\u0413\u0434\u0435 \u043c\u043e\u044f \u043b\u043e\u0436\u043a\u0430?","Gde moya lozhka?"],["The cup and the plate.","\u0427\u0430\u0448\u043a\u0430 \u0438 \u0442\u0430\u0440\u0435\u043b\u043a\u0430.","Chashka i tarelka."],["I eat with a fork.","\u042f \u0435\u043c \u0432\u0438\u043b\u043a\u043e\u0439.","Ya yem vilkoy."]]
     ]},
 
   en: { name:"English", code:"EN", tint:"#2B4A8B", tts:"en-US", nativeName:"Ingl\u00eas", from:"Portuguese",
@@ -839,6 +901,15 @@ const COURSES = {
       [["Eu sou estudante.","I am a student."],["Ela \u00e9 professora.","She is a teacher."],["Este \u00e9 o meu livro.","This is my book."],["A mulher tem um livro.","The woman has a book."],["Eu falo uma l\u00edngua.","I speak one language."],["O que \u00e9 isto?","What is this?"]],
       [["e","and"],["ou","or"],["mas","but"],["com","with"],["muito","very"],["tamb\u00e9m","also"],["aqui","here"],["ali","there"],["quem","who"],["o que","what"]],
       [["O homem e a mulher.","The man and the woman."],["Aqui est\u00e1 o meu livro.","Here is my book."],["Quem est\u00e1 aqui?","Who is here?"],["O professor est\u00e1 com a menina.","The teacher is with the girl."],["Eu falo com o professor.","I speak with the teacher."],["A menina tamb\u00e9m \u00e9 estudante.","The girl is also a student."]]
+    ,
+      [["fam\u00edlia","family"],["pais","parents"],["av\u00f4","grandfather"],["tio","uncle"],["tia","aunt"],["primo","cousin"],["beb\u00ea","baby"],["vizinho","neighbour"],["gente","people"],["idade","age"]],
+      [["Esta \u00e9 a minha fam\u00edlia.","This is my family."],["O meu av\u00f4 est\u00e1 aqui.","My grandfather is here."],["Eu tenho dois primos.","I have two cousins."],["O beb\u00ea est\u00e1 com a minha tia.","The baby is with my aunt."],["O meu vizinho \u00e9 professor.","My neighbour is a teacher."],["O meu tio e a minha tia.","My uncle and my aunt."]],
+      [["m\u00e9dico","doctor"],["enfermeira","nurse"],["cozinheiro","cook"],["motorista","driver"],["fazendeiro","farmer"],["artista","artist"],["escritor","writer"],["cantor","singer"],["soldado","soldier"],["trabalhador","worker"]],
+      [["O meu pai \u00e9 m\u00e9dico.","My father is a doctor."],["A minha irm\u00e3 \u00e9 enfermeira.","My sister is a nurse."],["O cozinheiro \u00e9 o meu tio.","The cook is my uncle."],["O meu primo \u00e9 cantor.","My cousin is a singer."],["Quem \u00e9 o motorista?","Who is the driver?"],["O artista \u00e9 o meu vizinho.","The artist is my neighbour."]],
+      [["peixe","fish"],["sopa","soup"],["salada","salad"],["fruta","fruit"],["legume","vegetable"],["a\u00e7\u00facar","sugar"],["sal","salt"],["manteiga","butter"],["ch\u00e1","tea"],["vinho","wine"]],
+      [["Eu queria um ch\u00e1.","I would like a tea."],["A sopa est\u00e1 muito boa.","The soup is very good."],["Eu como peixe.","I eat fish."],["Ela bebe vinho.","She drinks wine."],["A salada \u00e9 com queijo.","The salad is with cheese."],["Voc\u00ea tem fruta?","Do you have fruit?"]],
+      [["mesa","table"],["x\u00edcara","cup"],["faca","knife"],["garfo","fork"],["colher","spoon"],["prato","plate"],["comida","food"],["jantar","dinner"],["cozinha","kitchen"],["restaurante","restaurant"]],
+      [["A comida est\u00e1 na mesa.","The food is on the table."],["O jantar est\u00e1 na cozinha.","Dinner is in the kitchen."],["O meu prato est\u00e1 aqui.","My plate is here."],["Onde est\u00e1 a minha colher?","Where is my spoon?"],["A x\u00edcara e o prato.","The cup and the plate."],["Eu como com um garfo.","I eat with a fork."]]
     ]}
 };
 
@@ -1735,17 +1806,34 @@ function pickKind(item, level, audioOk){
   return bag[Math.floor(Math.random() * bag.length)];
 }
 
+/* The wrong answers. No two options may read the same on either side, and
+   none may read the same as the right one: French says la fille for both the
+   girl and the daughter, German die Frau for the woman and the wife, and a
+   question that offered both would mark one of two right answers wrong. The
+   English side is held to the same rule, so "What does la fille mean?" can
+   never put girl beside daughter either. */
+function distractors(item, pool, n){
+  const out = [], tgtSeen = {}, enSeen = {};
+  tgtSeen[loose(item.tgt)] = true;
+  enSeen[norm(item.en)] = true;
+  shuffle(pool).forEach(function(x){
+    if (out.length >= n) return;
+    const t = loose(x.tgt), e = norm(x.en);
+    if (tgtSeen[t] || enSeen[e]) return;
+    tgtSeen[t] = true;
+    enSeen[e] = true;
+    out.push(x);
+  });
+  return out;
+}
+
 function makeExercise(item, level, c, audioOk, forced){
   const kind = forced || pickKind(item, level, audioOk);
   const pool = c.items.filter(function(x){ return x.kind === item.kind && x.id !== item.id; });
   const base = { id: item.id, item: item, kind: kind };
 
-  if (kind === "pick_tgt" || kind === "listen") {
-    const wrong = sample(pool, 3);
-    return Object.assign(base, { options: shuffle([item].concat(wrong)), answer: item.id });
-  }
-  if (kind === "pick_en") {
-    const wrong = sample(pool, 3);
+  if (kind === "pick_tgt" || kind === "listen" || kind === "pick_en") {
+    const wrong = distractors(item, pool, 3);
     return Object.assign(base, { options: shuffle([item].concat(wrong)), answer: item.id });
   }
   if (kind === "bank") {
