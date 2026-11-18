@@ -5,6 +5,7 @@ Record the course audio with Kokoro-82M, locally.
     python tools/kokoro.py fr                record the whole French course
     python tools/kokoro.py fr --limit 6      just the first few, to audition
     python tools/kokoro.py fr --words        the single words on the tiles
+    python tools/kokoro.py --all --audit  read every clip back against the model
     python tools/kokoro.py --all             every course Kokoro has a voice for
     node tools/audio.js manifest             then index what was written
 
@@ -26,9 +27,22 @@ and the weights, which are too big to commit and land in tools/models/:
 
 The phrases are read out of the page by `node tools/audio.js list`, so the
 courses stay the one source of truth.
+
+A clip that is already on disk is left alone -- unless the course has been
+rewritten under it. assets/audio/recorded.json holds the text each clip was
+made from, so changing a word re-records it. Without that, adding the article
+to the French nouns left ten clips saying "homme" where the page had come to
+say "l\'homme", and nothing anywhere said so.
+
+--audit is the slow way of asking the same question of a clip the ledger says
+nothing about: every line is spoken again and kept only if it runs as long as
+what is already on disk, to within a frame or two. It is how the ledger was
+filled in the first place, and what to reach for when it is in doubt.
 """
 
 import argparse
+import io
+import json
 import os
 import subprocess
 import sys
@@ -95,7 +109,7 @@ def engine():
     return Kokoro(model, voices)
 
 
-def record(lang, limit=0, force=False, speed=1.0, which="list"):
+def record(lang, limit=0, force=False, speed=1.0, which="list", audit=False):
     if lang in UNVOICED:
         print(lang + ": " + UNVOICED[lang])
         return 0
@@ -113,23 +127,77 @@ def record(lang, limit=0, force=False, speed=1.0, which="list"):
     os.makedirs(folder, exist_ok=True)
     k = engine()
 
-    written = skipped = 0
+    book = read_ledger()
+    said = book.setdefault(lang, {})
+
+    written = skipped = redone = 0
     for i, row in enumerate(rows, 1):
         path = os.path.join(folder, *(row["id"].split("/"))) + "." + FORMAT
         os.makedirs(os.path.dirname(path), exist_ok=True)
-        if os.path.exists(path) and not force:
+        fresh = os.path.exists(path) and said.get(row["id"]) == row["text"]
+        if fresh and not force and not audit:
             skipped += 1
             continue
         audio, rate = k.create(row["text"], voice=spec["voice"], speed=speed, lang=spec["lang"])
         if not len(audio) or float(np.abs(audio).max()) < 0.01:
             print("  silent, skipped: " + row["id"] + "  " + row["text"])
             continue
+        if audit and not force and os.path.exists(path):
+            was = seconds(path)
+            if was is not None and abs(was - len(audio) / float(rate)) < SAME:
+                said[row["id"]] = row["text"]
+                skipped += 1
+                continue
+            print("  %3d/%d  %-10s was %s, the line says %r"
+                  % (i, len(rows), row["id"],
+                     "unreadable" if was is None else "%.2fs" % was, row["text"]))
+        if os.path.exists(path):
+            redone += 1
         sf.write(path, audio, rate, format="MP3")
+        said[row["id"]] = row["text"]
         written += 1
         print("  %3d/%d  %-10s %5.2fs  %s" % (i, len(rows), row["id"], len(audio) / rate, row["text"]))
-    print("%s: %d written, %d already there%s"
-          % (lang, written, skipped, "  (" + spec["note"] + ")" if spec["note"] else ""))
+    write_ledger(book)
+    print("%s: %d written%s, %d already there%s"
+          % (lang, written, ", %d of them rewritten under a changed word" % redone if redone else "",
+             skipped, "  (" + spec["note"] + ")" if spec["note"] else ""))
     return written
+
+
+def seconds(path):
+    """How long a clip on disk runs, or None if it cannot be read."""
+    try:
+        import soundfile as sf
+        a, rate = sf.read(path, always_2d=True)
+        return len(a) / float(rate)
+    except Exception:
+        return None
+
+
+# Two clips of the same line never come out byte for byte the same -- the
+# encoder sees to that -- but they run to the same length every time, so the
+# length is what a clip can be checked against.
+SAME = 0.03
+
+
+def ledger_path():
+    return os.path.join(AUDIO, "recorded.json")
+
+
+def read_ledger():
+    """What each clip on disk was made from, by language and id."""
+    try:
+        with io.open(ledger_path(), encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+
+def write_ledger(book):
+    os.makedirs(AUDIO, exist_ok=True)
+    with io.open(ledger_path(), "w", encoding="utf-8", newline="\n") as f:
+        json.dump(book, f, ensure_ascii=False, indent=1, sort_keys=True)
+        f.write("\n")
 
 
 def show():
@@ -150,6 +218,8 @@ def main():
     ap.add_argument("--words", action="store_true",
                     help="the single words the sentence tiles show, into <lang>/w/")
     ap.add_argument("--force", action="store_true", help="redo clips that already exist")
+    ap.add_argument("--audit", action="store_true",
+                    help="speak every line again and keep the clip only if it still matches")
     ap.add_argument("--speed", type=float, default=1.0, help="1.0 is the natural rate")
     a = ap.parse_args()
 
@@ -159,7 +229,7 @@ def main():
     total = 0
     which = "words" if a.words else "list"
     for lang in (list(VOICES) if a.all else [a.lang]):
-        total += record(lang, a.limit, a.force, a.speed, which)
+        total += record(lang, a.limit, a.force, a.speed, which, a.audit)
     if total:
         print("\nnow run:  node tools/audio.js manifest")
 

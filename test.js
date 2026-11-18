@@ -951,6 +951,68 @@ test("every piece a tile can show has a recording, in the courses that have any"
   assert.ok(checked > 300, "only " + checked + " tile words were checked");
 });
 
+/* A clip is a file named after an item, and the file does not change when the
+   item does. Adding the article to the French nouns left ten recordings saying
+   "homme" under a page that had come to say "l'homme", and the only way anyone
+   found out was by listening. tools/kokoro.py writes down the line it recorded;
+   this reads that back against the course as it stands now. */
+test("every recording was made from the words the course has now", function () {
+  const file = path.join(__dirname, "assets", "audio", "recorded.json");
+  if (!fs.existsSync(file)) return;
+  const said = JSON.parse(fs.readFileSync(file, "utf8"));
+
+  const index = path.join(__dirname, "assets", "audio", "index.json");
+  if (!fs.existsSync(index)) return;
+  const manifest = JSON.parse(fs.readFileSync(index, "utf8"));
+
+  /* Every clip the manifest switches on, rather than every clip the ledger
+     happens to mention: a recording nobody can vouch for is the thing being
+     looked for, so an id missing from the ledger has to fail here and not be
+     passed over. */
+  const a = loadApp();
+  let checked = 0;
+  (manifest.items || []).forEach(function (id) {
+    const lg = id.slice(0, id.indexOf("-"));
+    assert.ok(a.LANGS.indexOf(lg) > -1, lg + " is not a course");
+    const item = a.COURSES[lg].byId[id];
+    assert.ok(item, id + " has a clip and no item to go with it");
+    const heard = said[lg] && said[lg][id];
+    assert.ok(heard !== undefined,
+      id + " has a clip that nothing says the words of \u2014 rerun"
+      + " python tools/kokoro.py " + lg + " --audit");
+    assert.strictEqual(heard, item.tgt,
+      lg + "/" + id + ' was recorded saying "' + heard + '" and the course now says "'
+      + item.tgt + '" \u2014 rerun python tools/kokoro.py ' + lg);
+    checked++;
+  });
+  assert.ok(checked > 800, "only " + checked + " recordings were checked");
+});
+
+test("the tile recordings were made from the words the tiles show", function () {
+  const file = path.join(__dirname, "assets", "audio", "recorded.json");
+  const index = path.join(__dirname, "assets", "audio", "index.json");
+  if (!fs.existsSync(file) || !fs.existsSync(index)) return;
+  const said = JSON.parse(fs.readFileSync(file, "utf8"));
+  const manifest = JSON.parse(fs.readFileSync(index, "utf8"));
+  if (!manifest.words) return;
+
+  let checked = 0;
+  Object.keys(manifest.words).forEach(function (lg) {
+    Object.keys(manifest.words[lg]).forEach(function (word) {
+      const slug = manifest.words[lg][word];
+      const heard = said[lg] && said[lg]["w/" + slug];
+      assert.ok(heard !== undefined,
+        lg + "/w/" + slug + " has a clip that nothing says the words of");
+      /* The manifest keys a word by its lower case; the recording was made
+         from the piece as the tile prints it. */
+      assert.strictEqual(heard.toLowerCase(), word,
+        lg + ': the clip for "' + word + '" was made saying "' + heard + '"');
+      checked++;
+    });
+  });
+  assert.ok(checked > 500, "only " + checked + " tile recordings were checked");
+});
+
 test("no clip is named after a device Windows keeps for itself", function () {
   const file = path.join(__dirname, "assets", "audio", "index.json");
   if (!fs.existsSync(file)) return;

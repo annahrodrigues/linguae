@@ -124,6 +124,7 @@ pip install kokoro-onnx soundfile misaki espeakng-loader
 python tools/kokoro.py --voices        # the voice used for each course
 python tools/kokoro.py --all          # record everything it can speak
 python tools/kokoro.py --all --words  # and the single words on the tiles
+python tools/kokoro.py --all --audit  # read every clip back against the model
 node tools/audio.js manifest
 ```
 
@@ -143,6 +144,17 @@ tiles. The manifest that indexes them is 13 KB.
 `assets/audio/index.json` is the whole contract. Without it the app never asks
 for a clip, so the feature costs nothing until the first file lands. Recording
 a language also switches its listening exercises back on, item by item.
+
+A clip already on disk is left alone, which is how a run after a few new
+lessons takes a minute rather than twenty. That cuts both ways: a word rewritten
+under its own recording is not noticed, and ten French nouns went out saying
+*homme* after the page had come to say *l'homme*. So `assets/audio/recorded.json`
+holds the line each clip was made from, a changed line re-records, and a test
+reads the ledger back against the course. `--audit` is the slow way of asking
+the same question where the ledger says nothing: every line is spoken again and
+the clip is kept only if it still runs as long. Two recordings of one line are
+never identical byte for byte — the encoder sees to that — but they are always
+the same length.
 
 ### The words on the tiles
 
