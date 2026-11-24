@@ -114,6 +114,26 @@ def api_key():
     return key
 
 
+class Refused(Exception):
+    """The API would not do it. Carries enough to say why in one line."""
+
+    def __init__(self, code, detail):
+        self.code = code
+        self.detail = detail or ""
+        self.need = ""
+        # A key can be scoped to some endpoints and not others, and the answer
+        # names the permission it wanted: "missing the permission voices_read
+        # to execute this operation". Worth lifting out -- it is the whole fix.
+        try:
+            says = json.loads(self.detail).get("detail") or {}
+            message = says.get("message") or ""
+            if "missing the permission" in message:
+                self.need = message.split("missing the permission", 1)[1].split()[0]
+        except Exception:
+            pass
+        Exception.__init__(self, "%d %s" % (code, self.detail[:300]))
+
+
 def call(path, key, body=None, raw=False):
     """One request. Returns parsed JSON, or the bytes when raw."""
     req = urllib.request.Request(API + path, method="POST" if body is not None else "GET")
@@ -131,11 +151,7 @@ def call(path, key, body=None, raw=False):
             detail = e.read().decode("utf-8", "replace")[:400]
         except Exception:
             pass
-        if e.code == 401:
-            sys.exit("the API key was refused (401). Check it, or make a new one.")
-        if e.code == 429:
-            sys.exit("the account is out of credits or being rate limited (429).\n" + detail)
-        sys.exit("the API said %d for %s\n%s" % (e.code, path, detail))
+        raise Refused(e.code, detail)
     except urllib.error.URLError as e:
         sys.exit("could not reach the API: %s" % e.reason)
     if raw:
@@ -143,9 +159,27 @@ def call(path, key, body=None, raw=False):
     return json.loads(payload.decode("utf-8"))
 
 
+def blame(where, err):
+    """What to tell someone whose key has just been turned away."""
+    if err.need:
+        return ("the key cannot %s: it is missing the %s permission.\n"
+                "  Add it on the key at elevenlabs.io/app/api/api-keys, or see below."
+                % (where, err.need))
+    if err.code == 401:
+        return "the API key was refused (401). Check it, or make a new one.\n  " + err.detail[:200]
+    if err.code == 429:
+        return "the account is out of credits or being rate limited (429).\n  " + err.detail[:200]
+    return "the API said %d while trying to %s\n  %s" % (err.code, where, err.detail[:200])
+
+
 def allowance(key):
-    """How many credits are left this month, and when it resets."""
-    sub = call("/user/subscription", key)
+    """How many credits are left this month, or None where the key may not look."""
+    try:
+        sub = call("/user/subscription", key)
+    except Refused as e:
+        if e.need:
+            return None
+        sys.exit(blame("read the allowance", e))
     used = int(sub.get("character_count") or 0)
     cap = int(sub.get("character_limit") or 0)
     return {"used": used, "cap": cap, "left": max(0, cap - used),
@@ -153,14 +187,26 @@ def allowance(key):
 
 
 def voices_of(key):
-    """The voices this account can actually use, by name."""
-    found = call("/voices", key).get("voices") or []
+    """The voices this account can actually use, by name, or None where the
+    key may not look."""
+    try:
+        found = call("/voices", key).get("voices") or []
+    except Refused as e:
+        if e.need:
+            return None
+        sys.exit(blame("list the voices", e))
     return [{"id": v.get("voice_id"), "name": v.get("name") or "",
              "kind": v.get("category") or ""} for v in found if v.get("voice_id")]
 
 
-def pick_voice(key, want):
+def pick_voice(key, want, voice_id=None):
+    if voice_id:
+        return {"id": voice_id, "name": want or voice_id, "kind": "named by id"}
     mine = voices_of(key)
+    if mine is None:
+        sys.exit("the key cannot list the voices: it is missing the voices_read permission.\n"
+                 "  Add it on the key at elevenlabs.io/app/api/api-keys,\n"
+                 "  or name the voice outright with --voice-id.")
     if not mine:
         sys.exit("the account has no voices to record with")
     for v in mine:
@@ -237,7 +283,8 @@ def wanted(lang, which, limit, force, audit, said):
     return rows, todo
 
 
-def record(lang, limit=0, force=False, which="list", audit=False, voice=None, yes=False):
+def record(lang, limit=0, force=False, which="list", audit=False, voice=None, yes=False,
+           voice_id=None):
     if lang not in VOICES and not voice:
         sys.exit("no voice mapped for " + lang + "; name one with --voice")
 
@@ -254,16 +301,27 @@ def record(lang, limit=0, force=False, which="list", audit=False, voice=None, ye
 
     cost = sum(len(r["text"]) for r in todo)
     purse = allowance(key)
-    print("%s: %d of %d lines to say, %d characters; %d credits left on %s"
-          % (lang, len(todo), len(rows), cost, purse["left"], purse["tier"]))
-    if cost > purse["left"] and not yes:
-        sys.exit("  that is %d more than the account has. The allowance resets monthly;\n"
-                 "  record one course now and the other after it does, or pass --yes to\n"
-                 "  start anyway and stop when the credits run out."
-                 % (cost - purse["left"]))
+    if purse is None:
+        print("%s: %d of %d lines to say, %d characters" % (lang, len(todo), len(rows), cost))
+        if not yes:
+            sys.exit("  the key cannot read the allowance: it is missing the user_read\n"
+                     "  permission, so there is no telling whether the month covers this.\n"
+                     "  Add it on the key at elevenlabs.io/app/api/api-keys, or pass --yes\n"
+                     "  to go ahead without the check.")
+        print("  going ahead without checking the allowance")
+    else:
+        print("%s: %d of %d lines to say, %d characters; %d credits left on %s"
+              % (lang, len(todo), len(rows), cost, purse["left"], purse["tier"]))
+        if cost > purse["left"] and not yes:
+            sys.exit("  that is %d more than the account has. The allowance resets monthly;\n"
+                     "  record one course now and the other after it does, or pass --yes to\n"
+                     "  start anyway and stop when the credits run out."
+                     % (cost - purse["left"]))
 
     spec = VOICES.get(lang, {})
-    chosen = pick_voice(key, voice or spec.get("voice"))
+    # Named by id and not by name: call it by the id, rather than by the name
+    # this file happens to default to, which would be a different voice.
+    chosen = pick_voice(key, voice if voice_id else (voice or spec.get("voice")), voice_id)
     print("  voice: %s (%s)" % (chosen["name"], chosen["kind"]))
 
     folder = os.path.join(AUDIO, lang)
@@ -272,7 +330,11 @@ def record(lang, limit=0, force=False, which="list", audit=False, voice=None, ye
     for i, row in enumerate(todo, 1):
         path = os.path.join(folder, *(row["id"].split("/"))) + "." + FORMAT
         os.makedirs(os.path.dirname(path), exist_ok=True)
-        blob = speak(key, chosen["id"], row["text"])
+        try:
+            blob = speak(key, chosen["id"], row["text"])
+        except Refused as e:
+            write_ledger(book)
+            sys.exit(blame("record " + row["id"], e))
         if not blob:
             print("  nothing came back for " + row["id"] + "  " + row["text"])
             continue
@@ -321,10 +383,18 @@ def show():
         return
     key = api_key()
     purse = allowance(key)
-    print("\n  %s plan: %d of %d credits used, %d left"
-          % (purse["tier"], purse["used"], purse["cap"], purse["left"]))
-    print("  voices on this account: "
-          + ", ".join(sorted(v["name"] for v in voices_of(key))))
+    if purse is None:
+        print("\n  the key cannot read the allowance (it wants the user_read permission)")
+    else:
+        print("\n  %s plan: %d of %d credits used, %d left"
+              % (purse["tier"], purse["used"], purse["cap"], purse["left"]))
+    mine = voices_of(key)
+    if mine is None:
+        print("  the key cannot list the voices either (voices_read)")
+        print("\n  Both are read-only. Tick them on the key at elevenlabs.io/app/api/api-keys")
+        print("  and this tool can check the month before it spends it.")
+    else:
+        print("  voices on this account: " + ", ".join(sorted(v["name"] for v in mine)))
 
 
 def main():
@@ -339,6 +409,8 @@ def main():
     ap.add_argument("--audit", action="store_true",
                     help="say every line again and keep the clip only if it still matches")
     ap.add_argument("--voice", help="a voice on the account, by name")
+    ap.add_argument("--voice-id", dest="voice_id",
+                    help="a voice by its id, for a key that may not list them")
     ap.add_argument("--yes", action="store_true",
                     help="start even when the allowance will not cover the whole run")
     a = ap.parse_args()
@@ -349,7 +421,7 @@ def main():
     which = "words" if a.words else "list"
     total = 0
     for lang in (list(VOICES) if a.all else [a.lang]):
-        total += record(lang, a.limit, a.force, which, a.audit, a.voice, a.yes)
+        total += record(lang, a.limit, a.force, which, a.audit, a.voice, a.yes, a.voice_id)
     if total:
         print("\nnow run:  node tools/audio.js manifest")
 

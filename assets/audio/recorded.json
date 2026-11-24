@@ -1,4 +1,12 @@
 {
+ "de": {
+  "de-0-0": "hallo",
+  "de-0-1": "guten Morgen",
+  "de-0-2": "guten Abend",
+  "de-0-3": "gute Nacht",
+  "de-0-4": "danke",
+  "de-0-5": "bitte"
+ },
  "en": {
   "en-0-0": "hello",
   "en-0-1": "good morning",

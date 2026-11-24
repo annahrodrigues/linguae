@@ -41,6 +41,7 @@ class Fake(BaseHTTPRequestHandler):
     left = 10000
     voices = ["Charlotte", "George"]
     fail = None         # 401 or 429, to make the API refuse
+    deny = ()           # paths a narrowly scoped key may not touch
 
     def log_message(self, *a):
         pass
@@ -52,10 +53,22 @@ class Fake(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def _scoped_out(self, permission):
+        """What ElevenLabs answers a key that was not given a permission."""
+        return self._send(401, json.dumps({"detail": {
+            "type": "authentication_error", "code": "unauthorized",
+            "status": "missing_permissions",
+            "message": "The API key you used is missing the permission "
+                       + permission + " to execute this operation."}}).encode())
+
     def do_GET(self):
         Fake.asked.append(self.path)
         if Fake.fail:
             return self._send(Fake.fail, b'{"detail":"no"}')
+        if self.path.startswith("/user") and "user_read" in Fake.deny:
+            return self._scoped_out("user_read")
+        if self.path.startswith("/voices") and "voices_read" in Fake.deny:
+            return self._scoped_out("voices_read")
         if self.path.startswith("/user/subscription"):
             return self._send(200, json.dumps({
                 "tier": "free", "character_count": 10000 - Fake.left,
@@ -101,6 +114,7 @@ class Case(unittest.TestCase):
         Fake.said = []
         Fake.left = 10000
         Fake.fail = None
+        Fake.deny = ()
 
     def tearDown(self):
         eleven.AUDIO = self.audio
@@ -191,6 +205,59 @@ class Case(unittest.TestCase):
             eleven.record("fr", limit=1)
         self.assertIn("no voice mapped", str(caught.exception))
         self.assertEqual(Fake.said, [])
+
+    # ---------- a key scoped too narrowly ----------
+
+    def test_a_key_that_cannot_read_the_allowance_will_not_start_on_its_own(self):
+        """A key restricted to text-to-speech cannot see the month. Going ahead
+        anyway is a choice, not a default."""
+        Fake.deny = ("user_read",)
+        with self.assertRaises(SystemExit) as caught:
+            eleven.record("de", limit=2)
+        said = str(caught.exception)
+        self.assertIn("user_read", said, "it should name the permission")
+        self.assertIn("api-keys", said, "and where to add it")
+        self.assertEqual(Fake.said, [], "and nothing should have been charged for")
+
+    def test_yes_goes_ahead_without_the_allowance(self):
+        Fake.deny = ("user_read",)
+        eleven.record("de", limit=2, yes=True)
+        self.assertEqual(len(Fake.said), 2)
+
+    def test_a_key_that_cannot_list_voices_asks_for_the_id_outright(self):
+        Fake.deny = ("voices_read",)
+        with self.assertRaises(SystemExit) as caught:
+            eleven.record("de", limit=1)
+        said = str(caught.exception)
+        self.assertIn("voices_read", said)
+        self.assertIn("--voice-id", said, "it should say what to pass instead")
+        self.assertEqual(Fake.said, [])
+
+    def test_a_voice_named_by_id_needs_no_permission_to_list_them(self):
+        Fake.deny = ("voices_read", "user_read")
+        eleven.record("de", limit=2, yes=True, voice_id="id-george")
+        self.assertEqual(len(Fake.said), 2)
+        self.assertTrue(any("id-george" in p for p in Fake.asked),
+                        "the id it was given is the one it should ask for")
+
+    def test_a_voice_given_by_id_is_not_called_by_another_voice_s_name(self):
+        Fake.deny = ("voices_read", "user_read")
+        import contextlib
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            eleven.record("de", limit=1, yes=True, voice_id="id-george")
+        said = out.getvalue()
+        self.assertIn("id-george", said)
+        self.assertNotIn("Charlotte", said,
+                         "the default name must not be printed over a voice chosen by id")
+
+    def test_the_permission_is_lifted_out_of_whatever_the_api_says(self):
+        err = eleven.Refused(401, json.dumps({"detail": {
+            "message": "The API key you used is missing the permission "
+                       "voices_read to execute this operation."}}))
+        self.assertEqual(err.need, "voices_read")
+        plain = eleven.Refused(401, '{"detail":"bad key"}')
+        self.assertEqual(plain.need, "", "a plain refusal names no permission")
 
     # ---------- what it writes down ----------
 
