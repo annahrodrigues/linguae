@@ -621,7 +621,11 @@ const UNIT_META = [
              { title:"In the kitchen", kind:"p", set:25 }] },
   { id:"u4", title:"Everyday life", caption:"Unit 4", tint:"#1D7A5F", deep:"#17634E",
     lessons:[{ title:"Time words", kind:"w", set:6 },
-             { title:"Daily sentences", kind:"p", set:7 }] },
+             { title:"Daily sentences", kind:"p", set:7 },
+             { title:"The clock", kind:"w", set:26 },
+             { title:"What time is it", kind:"p", set:27 },
+             { title:"Everyday verbs", kind:"w", set:28 },
+             { title:"Through the day", kind:"p", set:29 }] },
   { id:"u5", title:"Numbers & money", caption:"Unit 5", tint:"#1D7A5F", deep:"#17634E",
     lessons:[{ title:"Numbers", kind:"w", set:8 },
              { title:"Shopping", kind:"p", set:9 }] },
@@ -673,6 +677,11 @@ const COURSES = {
       [["I would like a tea.","Me gustar\u00eda un t\u00e9."],["The soup is very good.","La sopa est\u00e1 muy buena."],["I eat fish.","Como pescado."],["She drinks wine.","Ella bebe vino."],["The salad is with cheese.","La ensalada es con queso."],["Do you have fruit?","\u00bfTienes fruta?"]],
       [["table","mesa"],["cup","taza"],["knife","cuchillo"],["fork","tenedor"],["spoon","cuchara"],["plate","plato"],["food","comida"],["dinner","cena"],["kitchen","cocina"],["restaurant","restaurante"]],
       [["The food is on the table.","La comida est\u00e1 en la mesa."],["Dinner is in the kitchen.","La cena est\u00e1 en la cocina."],["My plate is here.","Mi plato est\u00e1 aqu\u00ed."],["Where is my spoon?","\u00bfD\u00f3nde est\u00e1 mi cuchara?"],["The cup and the plate.","La taza y el plato."],["I eat with a fork.","Como con un tenedor."]]
+    ,
+      [["hour","hora"],["minute","minuto"],["time","tiempo"],["clock","reloj"],["midday","mediod\u00eda"],["night","noche"],["sometimes","a veces"],["often","a menudo"],["soon","pronto"],["then","luego"]],
+      [["Do you have time?","\u00bfTienes tiempo?"],["It is time for dinner.","Es la hora de la cena."],["I always have time.","Siempre tengo tiempo."],["Sometimes I work at night.","A veces trabajo de noche."],["I am coming soon.","Llego pronto."],["And then?","\u00bfY luego?"]],
+      [["to eat","comer"],["to drink","beber"],["to sleep","dormir"],["to read","leer"],["to write","escribir"],["to walk","caminar"],["to open","abrir"],["to close","cerrar"],["to buy","comprar"],["to wait","esperar"]],
+      [["I read every night.","Leo todas las noches."],["She sleeps late.","Ella duerme tarde."],["We eat at midday.","Comemos al mediod\u00eda."],["I want to buy a book.","Quiero comprar un libro."],["Wait a minute.","Espera un minuto."],["I write to my friend.","Escribo a mi amigo."]]
     ]},
 
   fr: { name:"French", code:"FR", tint:"#2c5fd0", tts:"fr-FR", nativeName:"Français",
@@ -714,6 +723,11 @@ const COURSES = {
       [["I would like a tea.","Je voudrais un th\u00e9."],["The soup is very good.","La soupe est tr\u00e8s bonne."],["I eat fish.","Je mange du poisson."],["She drinks wine.","Elle boit du vin."],["The salad is with cheese.","La salade est avec du fromage."],["Do you have fruit?","As-tu des fruits?"]],
       [["table","la table"],["cup","la tasse"],["knife","le couteau"],["fork","la fourchette"],["spoon","la cuill\u00e8re"],["plate","l'assiette"],["food","la nourriture"],["dinner","le d\u00eener"],["kitchen","la cuisine"],["restaurant","le restaurant"]],
       [["The food is on the table.","La nourriture est sur la table."],["Dinner is in the kitchen.","Le d\u00eener est dans la cuisine."],["My plate is here.","Mon assiette est ici."],["Where is my spoon?","O\u00f9 est ma cuill\u00e8re?"],["The cup and the plate.","La tasse et l'assiette."],["I eat with a fork.","Je mange avec une fourchette."]]
+    ,
+      [["hour","l'heure"],["minute","la minute"],["time","le temps"],["clock","l'horloge"],["midday","midi"],["night","la nuit"],["sometimes","parfois"],["often","souvent"],["soon","bient\u00f4t"],["then","puis"]],
+      [["Do you have time?","As-tu le temps?"],["It is time for dinner.","C'est l'heure du d\u00eener."],["I always have time.","J'ai toujours le temps."],["Sometimes I work at night.","Parfois je travaille la nuit."],["I am coming soon.","J'arrive bient\u00f4t."],["And then?","Et puis?"]],
+      [["to eat","manger"],["to drink","boire"],["to sleep","dormir"],["to read","lire"],["to write","\u00e9crire"],["to walk","marcher"],["to open","ouvrir"],["to close","fermer"],["to buy","acheter"],["to wait","attendre"]],
+      [["I read every night.","Je lis chaque nuit."],["She sleeps late.","Elle dort tard."],["We eat at midday.","Nous mangeons \u00e0 midi."],["I want to buy a book.","Je veux acheter un livre."],["Wait a minute.","Attends une minute."],["I write to my friend.","J'\u00e9cris \u00e0 mon ami."]]
     ]},
 
   de: { name:"German", code:"DE", tint:"#3f3f46", tts:"de-DE", nativeName:"Deutsch",
@@ -755,6 +769,11 @@ const COURSES = {
       [["I would like a tea.","Ich m\u00f6chte einen Tee."],["The soup is very good.","Die Suppe ist sehr gut."],["I eat fish.","Ich esse Fisch."],["She drinks wine.","Sie trinkt Wein."],["The salad is with cheese.","Der Salat ist mit K\u00e4se."],["Do you have fruit?","Hast du Obst?"]],
       [["table","der Tisch"],["cup","die Tasse"],["knife","das Messer"],["fork","die Gabel"],["spoon","der L\u00f6ffel"],["plate","der Teller"],["food","das Essen"],["dinner","das Abendessen"],["kitchen","die K\u00fcche"],["restaurant","das Restaurant"]],
       [["The food is on the table.","Das Essen ist auf dem Tisch."],["Dinner is in the kitchen.","Das Abendessen ist in der K\u00fcche."],["My plate is here.","Mein Teller ist hier."],["Where is my spoon?","Wo ist mein L\u00f6ffel?"],["The cup and the plate.","Die Tasse und der Teller."],["I eat with a fork.","Ich esse mit einer Gabel."]]
+    ,
+      [["hour","die Stunde"],["minute","die Minute"],["time","die Zeit"],["clock","die Uhr"],["midday","der Mittag"],["night","die Nacht"],["sometimes","manchmal"],["often","oft"],["soon","bald"],["then","dann"]],
+      [["Do you have time?","Hast du Zeit?"],["It is time for dinner.","Es ist Zeit zum Abendessen."],["I always have time.","Ich habe immer Zeit."],["Sometimes I work at night.","Manchmal arbeite ich nachts."],["I am coming soon.","Ich komme bald."],["And then?","Und dann?"]],
+      [["to eat","essen"],["to drink","trinken"],["to sleep","schlafen"],["to read","lesen"],["to write","schreiben"],["to walk","gehen"],["to open","\u00f6ffnen"],["to close","schlie\u00dfen"],["to buy","kaufen"],["to wait","warten"]],
+      [["I read every night.","Ich lese jede Nacht."],["She sleeps late.","Sie schl\u00e4ft sp\u00e4t."],["We eat at midday.","Wir essen mittags."],["I want to buy a book.","Ich will ein Buch kaufen."],["Wait a minute.","Warte eine Minute."],["I write to my friend.","Ich schreibe meinem Freund."]]
     ]},
 
   it: { name:"Italian", code:"IT", tint:"#1A8844", tts:"it-IT", nativeName:"Italiano",
@@ -796,6 +815,11 @@ const COURSES = {
       [["I would like a tea.","Vorrei un t\u00e8."],["The soup is very good.","La zuppa \u00e8 molto buona."],["I eat fish.","Mangio pesce."],["She drinks wine.","Lei beve vino."],["The salad is with cheese.","L'insalata \u00e8 con il formaggio."],["Do you have fruit?","Hai della frutta?"]],
       [["table","il tavolo"],["cup","la tazza"],["knife","il coltello"],["fork","la forchetta"],["spoon","il cucchiaio"],["plate","il piatto"],["food","il cibo"],["dinner","la cena"],["kitchen","la cucina"],["restaurant","il ristorante"]],
       [["The food is on the table.","Il cibo \u00e8 sul tavolo."],["Dinner is in the kitchen.","La cena \u00e8 in cucina."],["My plate is here.","Il mio piatto \u00e8 qui."],["Where is my spoon?","Dov'\u00e8 il mio cucchiaio?"],["The cup and the plate.","La tazza e il piatto."],["I eat with a fork.","Mangio con una forchetta."]]
+    ,
+      [["hour","l'ora"],["minute","il minuto"],["time","il tempo"],["clock","l'orologio"],["midday","il mezzogiorno"],["night","la notte"],["sometimes","a volte"],["often","spesso"],["soon","subito"],["then","poi"]],
+      [["Do you have time?","Hai tempo?"],["It is time for dinner.","\u00c8 l'ora della cena."],["I always have time.","Ho sempre tempo."],["Sometimes I work at night.","A volte lavoro di notte."],["I am coming soon.","Arrivo subito."],["And then?","E poi?"]],
+      [["to eat","mangiare"],["to drink","bere"],["to sleep","dormire"],["to read","leggere"],["to write","scrivere"],["to walk","camminare"],["to open","aprire"],["to close","chiudere"],["to buy","comprare"],["to wait","aspettare"]],
+      [["I read every night.","Leggo ogni notte."],["She sleeps late.","Lei dorme tardi."],["We eat at midday.","Mangiamo a mezzogiorno."],["I want to buy a book.","Voglio comprare un libro."],["Wait a minute.","Aspetta un minuto."],["I write to my friend.","Scrivo al mio amico."]]
     ]},
 
   la: { name:"Latin", code:"LA", tint:"#8a6d3b", tts:"it-IT", nativeName:"Lingua Latina",
@@ -838,6 +862,11 @@ const COURSES = {
       [["I would like honey.","Mel velim."],["The soup is very good.","Iūs valdē bonum est."],["I eat vegetables.","Holera edō."],["She drinks water.","Aquam bibit."],["The salad is with cheese.","Acētāria cum cāseō sunt."],["Do you have fruit?","Habēsne frūctum?"]],
       [["table","mēnsa"],["cup","pōculum"],["knife","culter"],["fork","fuscinula"],["spoon","cochlear"],["plate","patina"],["food","cibus"],["dinner","cēna"],["kitchen","culīna"],["restaurant","caupōna"]],
       [["The food is on the table.","Cibus in mēnsā est."],["Dinner is in the kitchen.","Cēna in culīnā est."],["My plate is here.","Patina mea hīc est."],["Where is my spoon?","Ubi est cochlear meum?"],["The cup and the plate.","Pōculum et patina."],["I eat with a fork.","Fuscinulā edō."]]
+    ,
+      [["hour","hōra"],["minute","mōmentum"],["time","tempus"],["clock","hōrologium"],["midday","merīdiēs"],["evening","vesper"],["sometimes","interdum"],["soon","mox"],["then","deinde"],["once","semel"]],
+      [["Do you have time?","Habēsne tempus?"],["It is time for dinner.","Hōra cēnae est."],["I always have time.","Semper tempus habeō."],["Sometimes I work at night.","Interdum nocte labōrō."],["I am coming soon.","Mox veniō."],["And then?","Et deinde?"]],
+      [["to eat","edere"],["to drink","bibere"],["to sleep","dormīre"],["to read","legere"],["to write","scrībere"],["to walk","ambulāre"],["to open","aperīre"],["to close","claudere"],["to buy","emere"],["to wait","exspectāre"]],
+      [["I read every night.","Omnī nocte legō."],["He always sleeps.","Semper dormit."],["We eat at midday.","Merīdiē edimus."],["I want to buy a book.","Librum emere volō."],["Wait a minute.","Mōmentum exspectā."],["I write to my friend.","Amīcō meō scrībō."]]
     ]},
 
   ru: { name:"Russian", code:"RU", tint:"#1B4F9C", tts:"ru-RU", nativeName:"\u0420\u0443\u0441\u0441\u043a\u0438\u0439",
@@ -879,6 +908,11 @@ const COURSES = {
       [["I would like a tea.","\u042f \u0445\u043e\u0447\u0443 \u0447\u0430\u0439.","Ya khochu chay."],["The soup is very good.","\u0421\u0443\u043f \u043e\u0447\u0435\u043d\u044c \u0432\u043a\u0443\u0441\u043d\u044b\u0439.","Sup ochen vkusnyy."],["I eat fish.","\u042f \u0435\u043c \u0440\u044b\u0431\u0443.","Ya yem rybu."],["She drinks wine.","\u041e\u043d\u0430 \u043f\u044c\u0451\u0442 \u0432\u0438\u043d\u043e.","Ona pyot vino."],["The salad is with cheese.","\u0421\u0430\u043b\u0430\u0442 \u0441 \u0441\u044b\u0440\u043e\u043c.","Salat s syrom."],["Do you have fruit?","\u0423 \u0432\u0430\u0441 \u0435\u0441\u0442\u044c \u0444\u0440\u0443\u043a\u0442\u044b?","U vas est frukty?"]],
       [["table","\u0441\u0442\u043e\u043b","stol"],["cup","\u0447\u0430\u0448\u043a\u0430","chashka"],["knife","\u043d\u043e\u0436","nozh"],["fork","\u0432\u0438\u043b\u043a\u0430","vilka"],["spoon","\u043b\u043e\u0436\u043a\u0430","lozhka"],["plate","\u0442\u0430\u0440\u0435\u043b\u043a\u0430","tarelka"],["food","\u0435\u0434\u0430","yeda"],["dinner","\u0443\u0436\u0438\u043d","uzhin"],["kitchen","\u043a\u0443\u0445\u043d\u044f","kukhnya"],["restaurant","\u0440\u0435\u0441\u0442\u043e\u0440\u0430\u043d","restoran"]],
       [["The food is on the table.","\u0415\u0434\u0430 \u043d\u0430 \u0441\u0442\u043e\u043b\u0435.","Yeda na stole."],["Dinner is in the kitchen.","\u0423\u0436\u0438\u043d \u043d\u0430 \u043a\u0443\u0445\u043d\u0435.","Uzhin na kukhne."],["My plate is here.","\u041c\u043e\u044f \u0442\u0430\u0440\u0435\u043b\u043a\u0430 \u0437\u0434\u0435\u0441\u044c.","Moya tarelka zdes."],["Where is my spoon?","\u0413\u0434\u0435 \u043c\u043e\u044f \u043b\u043e\u0436\u043a\u0430?","Gde moya lozhka?"],["The cup and the plate.","\u0427\u0430\u0448\u043a\u0430 \u0438 \u0442\u0430\u0440\u0435\u043b\u043a\u0430.","Chashka i tarelka."],["I eat with a fork.","\u042f \u0435\u043c \u0432\u0438\u043b\u043a\u043e\u0439.","Ya yem vilkoy."]]
+    ,
+      [["hour","\u0447\u0430\u0441","chas"],["minute","\u043c\u0438\u043d\u0443\u0442\u0430","minuta"],["time","\u0432\u0440\u0435\u043c\u044f","vremya"],["clock","\u0447\u0430\u0441\u044b","chasy"],["midday","\u043f\u043e\u043b\u0434\u0435\u043d\u044c","polden"],["night","\u043d\u043e\u0447\u044c","noch"],["sometimes","\u0438\u043d\u043e\u0433\u0434\u0430","inogda"],["often","\u0447\u0430\u0441\u0442\u043e","chasto"],["soon","\u0441\u043a\u043e\u0440\u043e","skoro"],["then","\u043f\u043e\u0442\u043e\u043c","potom"]],
+      [["Do you have time?","\u0423 \u0442\u0435\u0431\u044f \u0435\u0441\u0442\u044c \u0432\u0440\u0435\u043c\u044f?","U tebya est vremya?"],["It is time for dinner.","\u0412\u0440\u0435\u043c\u044f \u0443\u0436\u0438\u043d\u0430.","Vremya uzhina."],["I always have time.","\u0423 \u043c\u0435\u043d\u044f \u0432\u0441\u0435\u0433\u0434\u0430 \u0435\u0441\u0442\u044c \u0432\u0440\u0435\u043c\u044f.","U menya vsegda est vremya."],["Sometimes I work at night.","\u0418\u043d\u043e\u0433\u0434\u0430 \u044f \u0440\u0430\u0431\u043e\u0442\u0430\u044e \u043d\u043e\u0447\u044c\u044e.","Inogda ya rabotayu nochyu."],["I am coming soon.","\u042f \u0441\u043a\u043e\u0440\u043e \u043f\u0440\u0438\u0434\u0443.","Ya skoro pridu."],["And then?","\u0410 \u043f\u043e\u0442\u043e\u043c?","A potom?"]],
+      [["to eat","\u0435\u0441\u0442\u044c","yest"],["to drink","\u043f\u0438\u0442\u044c","pit"],["to sleep","\u0441\u043f\u0430\u0442\u044c","spat"],["to read","\u0447\u0438\u0442\u0430\u0442\u044c","chitat"],["to write","\u043f\u0438\u0441\u0430\u0442\u044c","pisat"],["to walk","\u0433\u0443\u043b\u044f\u0442\u044c","gulyat"],["to open","\u043e\u0442\u043a\u0440\u044b\u0432\u0430\u0442\u044c","otkryvat"],["to close","\u0437\u0430\u043a\u0440\u044b\u0432\u0430\u0442\u044c","zakryvat"],["to buy","\u043f\u043e\u043a\u0443\u043f\u0430\u0442\u044c","pokupat"],["to wait","\u0436\u0434\u0430\u0442\u044c","zhdat"]],
+      [["I read every night.","\u042f \u0447\u0438\u0442\u0430\u044e \u043a\u0430\u0436\u0434\u0443\u044e \u043d\u043e\u0447\u044c.","Ya chitayu kazhduyu noch."],["She sleeps late.","\u041e\u043d\u0430 \u0441\u043f\u0438\u0442 \u043f\u043e\u0437\u0434\u043d\u043e.","Ona spit pozdno."],["We eat at midday.","\u041c\u044b \u0435\u0434\u0438\u043c \u0432 \u043f\u043e\u043b\u0434\u0435\u043d\u044c.","My yedim v polden."],["I want to buy a book.","\u042f \u0445\u043e\u0447\u0443 \u043a\u0443\u043f\u0438\u0442\u044c \u043a\u043d\u0438\u0433\u0443.","Ya khochu kupit knigu."],["Wait a minute.","\u041f\u043e\u0434\u043e\u0436\u0434\u0438 \u043c\u0438\u043d\u0443\u0442\u0443.","Podozhdi minutu."],["I write to my friend.","\u042f \u043f\u0438\u0448\u0443 \u0434\u0440\u0443\u0433\u0443.","Ya pishu drugu."]]
     ]},
 
   en: { name:"English", code:"EN", tint:"#2B4A8B", tts:"en-US", nativeName:"Ingl\u00eas", from:"Portuguese",
@@ -921,6 +955,11 @@ const COURSES = {
       [["Eu queria um ch\u00e1.","I would like a tea."],["A sopa est\u00e1 muito boa.","The soup is very good."],["Eu como peixe.","I eat fish."],["Ela bebe vinho.","She drinks wine."],["A salada \u00e9 com queijo.","The salad is with cheese."],["Voc\u00ea tem fruta?","Do you have fruit?"]],
       [["mesa","table"],["x\u00edcara","cup"],["faca","knife"],["garfo","fork"],["colher","spoon"],["prato","plate"],["comida","food"],["jantar","dinner"],["cozinha","kitchen"],["restaurante","restaurant"]],
       [["A comida est\u00e1 na mesa.","The food is on the table."],["O jantar est\u00e1 na cozinha.","Dinner is in the kitchen."],["O meu prato est\u00e1 aqui.","My plate is here."],["Onde est\u00e1 a minha colher?","Where is my spoon?"],["A x\u00edcara e o prato.","The cup and the plate."],["Eu como com um garfo.","I eat with a fork."]]
+    ,
+      [["hora","hour"],["minuto","minute"],["tempo","time"],["rel\u00f3gio","clock"],["meio-dia","midday"],["noite","night"],["\u00e0s vezes","sometimes"],["muitas vezes","often"],["logo","soon"],["depois","then"]],
+      [["Voc\u00ea tem tempo?","Do you have time?"],["\u00c9 a hora do jantar.","It is time for dinner."],["Eu sempre tenho tempo.","I always have time."],["\u00c0s vezes eu trabalho \u00e0 noite.","Sometimes I work at night."],["Eu chego logo.","I am coming soon."],["E depois?","And then?"]],
+      [["comer","to eat"],["beber","to drink"],["dormir","to sleep"],["ler","to read"],["escrever","to write"],["caminhar","to walk"],["abrir","to open"],["fechar","to close"],["comprar","to buy"],["esperar","to wait"]],
+      [["Eu leio todas as noites.","I read every night."],["Ela dorme tarde.","She sleeps late."],["N\u00f3s comemos ao meio-dia.","We eat at midday."],["Eu quero comprar um livro.","I want to buy a book."],["Espere um minuto.","Wait a minute."],["Eu escrevo para o meu amigo.","I write to my friend."]]
     ]}
 };
 
@@ -2254,12 +2293,16 @@ function shell(){
     + '</div>'
     + '</header>'
     + '<main>' + body + '</main>'
-    /* The German and Russian recordings were made on ElevenLabs' free plan,
-       which asks that the work credit it. The other five courses are read by
-       Kokoro, which is Apache-2.0 and asks for nothing. */
+    /* Two credits, both of them owed. The German and Russian recordings were
+       made on ElevenLabs, whose plan asks for the mention; the other five
+       courses are read by Kokoro, which is Apache-2.0 and asks for nothing.
+       And some sentences were kept from Tatoeba, whose CC BY 2.0 FR asks that
+       the work say so and link back. */
     + '<footer class="appfoot">Linguae · a new language, from one you already have'
     + '<span class="appfoot__credit">German and Russian voices by '
-    + '<a href="https://elevenlabs.io" rel="noopener">elevenlabs.io</a></span></footer>'
+    + '<a href="https://elevenlabs.io" rel="noopener">elevenlabs.io</a>'
+    + ' · some sentences from <a href="https://tatoeba.org" rel="noopener">tatoeba.org</a>,'
+    + ' CC BY 2.0 FR</span></footer>'
     + '</div></div>'
     + '<nav class="tabbar" aria-label="Main">' + tabs + '</nav>';
 }

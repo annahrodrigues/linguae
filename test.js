@@ -738,7 +738,7 @@ test("the English course puts Portuguese on the known side", function () {
 test("every Russian item carries a romanisation", function () {
   const a = loadApp();
   const items = a.COURSES.ru.items;
-  assert.strictEqual(items.length, 208);
+  assert.strictEqual(items.length, 240);
   items.forEach(function (it) {
     assert.ok(it.rom && it.rom.trim(), it.id + " (" + it.en + ") has no romanisation");
     assert.ok(/[\u0400-\u04FF]/.test(it.tgt), it.id + " is not written in Cyrillic");
@@ -1031,6 +1031,58 @@ test("the page credits the voice it was lent", function () {
   const html = a.shell();
   assert.ok(html.indexOf("elevenlabs.io") > -1, "the credit should be on the page");
   assert.ok(html.indexOf("German and Russian") > -1, "and say what it is for");
+  /* Tatoeba's CC BY 2.0 FR asks for the mention, the link and the licence
+     name, which is three things and not one. */
+  /* Tatoeba asks for three things: that the work say so, that it link back,
+     and that it name the licence. A mention without the link is two of them. */
+  assert.ok(html.indexOf('href="https://tatoeba.org"') > -1,
+    "the sentences are owed a link, not just a mention");
+  assert.ok(html.indexOf("CC BY 2.0 FR") > -1, "with the licence named");
+});
+
+test("a clip's name does not move when its neighbours do", function () {
+  const file = path.join(__dirname, "assets", "audio", "index.json");
+  if (!fs.existsSync(file)) return;
+  const manifest = JSON.parse(fs.readFileSync(file, "utf8"));
+  if (!manifest.words) return;
+
+  /* A Cyrillic word leaves nothing behind when it is reduced to ASCII, so its
+     file used to be named after its place in the sorted list. Adding one word
+     to the course then renamed every file after it, and every clip had to be
+     recorded again for nothing. A name taken from the word itself stays put. */
+  let checked = 0;
+  Object.keys(manifest.words).forEach(function (lg) {
+    /* The old scheme named a word after where it fell in the sorted list, so
+       what has to be ruled out is a name that *is* that number. A digest can
+       come out all digits by chance -- one of these does -- so the test is
+       against the index itself and not against the shape of the name. */
+    const order = Object.keys(manifest.words[lg]).sort();
+    order.forEach(function (word, i) {
+      assert.notStrictEqual(manifest.words[lg][word], "w" + i,
+        lg + ': "' + word + '" is filed under its place in the list');
+      checked++;
+    });
+  });
+  assert.ok(checked > 900, "only " + checked + " names were checked");
+});
+
+test("a tile's file name comes from the word, not from its neighbours", function () {
+  const { slugs } = require("./tools/audio.js");
+  /* Nothing of a Cyrillic word survives the trip to ASCII, so its file used to
+     be named after where it fell in the sorted list. Adding one word then
+     renamed every file after it and every clip was recorded again for nothing
+     -- and the evidence disappeared with the names, which is why this asks the
+     naming directly instead of reading a manifest. */
+  const word = "\u0434\u0435\u0432\u043e\u0447\u043a\u0430";
+  const alone = slugs([word, "zebra"]);
+  const crowded = slugs([word, "zebra", "\u0430", "\u0431", "\u0432", "\u0433", "apple"]);
+  assert.strictEqual(alone[word], crowded[word],
+    "the same word in a longer list should keep its name");
+  assert.ok(alone[word], "and it should have one at all");
+
+  /* Two different words still have to land on two different names. */
+  const two = slugs(["\u0447\u0430\u0441", "\u0447\u0430\u0441\u044b"]);
+  assert.notStrictEqual(two["\u0447\u0430\u0441"], two["\u0447\u0430\u0441\u044b"]);
 });
 
 test("no clip is named after a device Windows keeps for itself", function () {
@@ -2628,11 +2680,11 @@ test("every course carries the same shape", function () {
   a.LANGS.forEach(function (lg) {
     const c = a.COURSES[lg];
     assert.strictEqual(c.units.length, 7, lg + " should have seven units");
-    /* The first three units run to six lessons; the rest are still a pair. */
-    eq(c.units.map(function (u) { return u.lessons.length; }), [6, 6, 6, 2, 2, 2, 2],
+    /* The first four units run to six lessons; the rest are still a pair. */
+    eq(c.units.map(function (u) { return u.lessons.length; }), [6, 6, 6, 6, 2, 2, 2],
        lg + " has the wrong number of lessons in a unit");
-    assert.strictEqual(c.lessons.length, 26, lg + " should have twenty-six lessons");
-    assert.strictEqual(c.items.length, 208, lg + " should have 208 items");
+    assert.strictEqual(c.lessons.length, 30, lg + " should have thirty lessons");
+    assert.strictEqual(c.items.length, 240, lg + " should have 240 items");
     c.lessons.forEach(function (l) {
       assert.ok(l.kind === "w" || l.kind === "p", "a lesson is words or phrases");
       /* Lessons alternate: ten words, then six phrases built from them. */
@@ -2650,7 +2702,7 @@ test("every course carries the same shape", function () {
         lg + "/" + u.id + " should teach the words before the phrases made of them");
     });
     const vocab = c.lessons.filter(function (l) { return l.kind === "w"; });
-    assert.strictEqual(vocab.length, 13, lg + " should have thirteen vocabulary lessons");
+    assert.strictEqual(vocab.length, 15, lg + " should have fifteen vocabulary lessons");
     vocab.forEach(function (l) {
       assert.ok(l.items.length >= 5, lg + "/" + l.id + " cannot fill a five-pair match");
     });
@@ -2689,7 +2741,10 @@ test("the lessons that were there before keep the ids progress was saved under",
   eq(a.COURSES.fr.units[2].lessons.map(function (l) { return l.id; }),
      ["fr-4", "fr-5", "fr-22", "fr-23", "fr-24", "fr-25"],
      "and so does Food & travel");
-  eq(a.COURSES.fr.units[3].lessons.map(function (l) { return l.id; }), ["fr-6", "fr-7"],
+  eq(a.COURSES.fr.units[3].lessons.map(function (l) { return l.id; }),
+     ["fr-6", "fr-7", "fr-26", "fr-27", "fr-28", "fr-29"],
+     "and Everyday life, the one written from the corpus");
+  eq(a.COURSES.fr.units[4].lessons.map(function (l) { return l.id; }), ["fr-8", "fr-9"],
      "while the units after them are untouched");
   eq(a.COURSES.fr.units[0].lessons.map(function (l) { return l.title; }),
      ["Greetings", "First phrases", "Everyday words", "Saying who you are",
@@ -2727,15 +2782,19 @@ test("the new lessons are reachable in order, not locked behind the old ones", f
    own unit teaches, and on Basics before it. */
 test("every unit that grew leans on the words it teaches", function () {
   const a = loadApp();
-  const ADDED = { 0: ["15", "17"], 1: ["19", "21"], 2: ["23", "25"] };
+  const ADDED = { 0: ["15", "17"], 1: ["19", "21"], 2: ["23", "25"], 3: ["27", "29"] };
   a.LANGS.forEach(function (lg) {
     Object.keys(ADDED).forEach(function (ui) {
       const unit = a.COURSES[lg].units[+ui];
-      const taught = {};
+      const taught = {}, stems = {};
       a.COURSES[lg].units.slice(0, +ui + 1).forEach(function (u) {
         u.lessons.forEach(function (l) {
           if (l.kind === "w") l.items.forEach(function (it) {
-            a.words(it.tgt).forEach(function (w) { taught[a.loose(w)] = true; });
+            a.words(it.tgt).forEach(function (w) {
+              const k = a.loose(w);
+              taught[k] = true;
+              if (k.length > 3) stems[k.slice(0, 3)] = true;
+            });
           });
         });
       });
@@ -2745,7 +2804,15 @@ test("every unit that grew leans on the words it teaches", function () {
         const met = {};
         lesson.items.forEach(function (it) {
           a.words(it.tgt).forEach(function (w) {
-            if (taught[a.loose(w)]) met[a.loose(w)] = true;
+            const k = a.loose(w);
+            if (taught[k]) { met[k] = true; return; }
+            /* Matched on the first three letters where the whole word does
+               not match, because a word taught in one shape turns up in a
+               sentence in another: Latin teaches legere and says lego, nox
+               and says nocte. Comparing whole words would call those new
+               vocabulary, which is the opposite of what is being checked. */
+            const stem = k.slice(0, 3);
+            if (k.length > 3 && stems[stem]) met[stem] = true;
           });
         });
         assert.ok(Object.keys(met).length >= 4,

@@ -26,6 +26,7 @@
 "use strict";
 
 const fs = require("fs");
+const crypto = require("crypto");
 const path = require("path");
 const vm = require("vm");
 
@@ -85,7 +86,12 @@ function slugs(keys) {
     let base = k.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
       .replace(/['\s]+/g, "-").replace(/[^a-z0-9-]/g, "")
       .replace(/-+/g, "-").replace(/^-|-$/g, "");
-    if (!base) base = "w" + i;
+    /* Nothing of the word survives the trip to ASCII -- every Cyrillic word
+       lands here -- so the name has to come from somewhere else. It used to be
+       the word's place in the sorted list, which meant that adding one word to
+       a course renamed every file after it and re-recorded the lot. A digest
+       of the word itself does not move when its neighbours do. */
+    if (!base) base = "w" + crypto.createHash("sha1").update(k).digest("hex").slice(0, 8);
     if (DEVICE.test(base)) base = base + "-w";
     let name = base, n = 1;
     while (taken[name]) name = base + "-" + (++n);
@@ -276,8 +282,52 @@ function cmdCourse(lang) {
   console.log(JSON.stringify(out));
 }
 
+/* Clips nothing points at any more. Renaming how a file is named -- which has
+   happened once, when Cyrillic words stopped being filed by their position --
+   leaves the old ones behind, referenced by nothing and committed forever. */
+function cmdTidy(flag) {
+  const manifest = path.join(AUDIO, "index.json");
+  if (!fs.existsSync(manifest)) return console.log("no manifest; nothing to tidy against");
+  const index = JSON.parse(fs.readFileSync(manifest, "utf8"));
+  const wanted = {};
+  (index.items || []).forEach(function (id) {
+    wanted[id.slice(0, id.indexOf("-")) + "/" + id] = true;
+  });
+  Object.keys(index.words || {}).forEach(function (lg) {
+    Object.keys(index.words[lg]).forEach(function (w) {
+      wanted[lg + "/w/" + index.words[lg][w]] = true;
+    });
+  });
+  const spare = [];
+  courses().LANGS.forEach(function (lg) {
+    /* Built with forward slashes throughout: these are manifest keys, not
+       paths, and the manifest does not know what Windows calls a separator. */
+    [lg, lg + "/w"].forEach(function (dir) {
+      listed(dir).forEach(function (f) {
+        const rel = dir + "/" + path.basename(f, path.extname(f));
+        if (!wanted[rel]) spare.push(path.join(AUDIO, dir, f));
+      });
+    });
+  });
+  if (!spare.length) return console.log("every clip on disk is one the manifest asks for");
+  console.log(spare.length + " clips nothing points at:");
+  spare.slice(0, 8).forEach(function (f) { console.log("  " + path.relative(AUDIO, f)); });
+  if (spare.length > 8) console.log("  ... and " + (spare.length - 8) + " more");
+  if (flag !== "--remove") return console.log("\npass --remove to delete them");
+  spare.forEach(function (f) { fs.unlinkSync(f); });
+  console.log("\nremoved " + spare.length);
+}
+
+/* Required by the tests, which check the naming without going through a
+   manifest: a naming that has gone wrong tends to leave no files for the
+   manifest to list, and so leaves nothing for a test to read. */
+module.exports = { slugs: slugs, key: key, chunks: chunks, wordsOf: wordsOf };
+
+if (require.main !== module) return;
+
 const cmd = process.argv[2];
 if (cmd === "course") cmdCourse(process.argv[3]);
+else if (cmd === "tidy") cmdTidy(process.argv[3]);
 else if (cmd === "list") cmdList(process.argv[3]);
 else if (cmd === "words") cmdWords(process.argv[3]);
 else if (cmd === "manifest") cmdManifest();

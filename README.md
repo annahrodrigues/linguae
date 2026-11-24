@@ -28,7 +28,7 @@ Pages from building anything and has it copy them across as they are.
 
 | | |
 |---|---|
-| **Courses** | 7 courses, 7 units and 26 lessons each, 208 words and phrases per course. Basics, People and Food & travel run to six lessons each, the units after them to two apiece. Spanish, French, German, Italian, Latin and Russian are taught from English; English is taught from Portuguese |
+| **Courses** | 7 courses, 7 units and 30 lessons each, 240 words and phrases per course. The first four units run to six lessons each, the units after them to two apiece. Spanish, French, German, Italian, Latin and Russian are taught from English; English is taught from Portuguese |
 | **Exercises** | 7 kinds: match the pairs, pick the translation in either direction, listen and transcribe, build from a word bank, free typing, and say it out loud |
 | **Keyboard** | A to D pick a lettered option; in the word bank, typing a word lays its piece down as soon as only one piece can be meant, a space settles for the word as typed where something longer begins the same way, and backspace takes back the letters first and then the last piece; Enter checks |
 | **Marking** | accents and punctuation are normalised, and a one-letter typo counts as correct, with a note |
@@ -241,6 +241,22 @@ sentences a learner can make from them are the common property of every course
 that has ever taught a language. Each lesson here is ten words, or six phrases
 built from words the unit has already taught -- a rule the tests check.
 
+Everyday life, the fourth unit, was the first written with `tools/harvest.py`
+rather than from a blank page. The sieve reads the course as it stands, works
+out what has been taught by that point, and offers the Tatoeba sentences built
+only out of that; `--plus` names the ten words the new lesson is about, so it
+can answer the question actually being asked -- *what could be said once these
+are taught?* The shortlist is not a lesson. It proposed *Hast du Zeit?* and
+*C'est l'heure du dîner*, which were kept; it also proposed a hundred ways of
+saying what time it is in digits, which were not.
+
+Sentences kept from Tatoeba are used under CC BY 2.0 FR, which the page footer
+and this file credit with a link and the licence name. The order to teach words
+in comes from how often they appear in Tatoeba itself, not from a frequency
+list: partly because the obvious lists are ShareAlike and this is not, but
+mostly because it is the better measure -- a word can only be taught here if
+the corpus can also show it in a sentence.
+
 A course may teach one word twice over, because a language does: French says
 *la fille* for the girl and for the daughter, German *die Frau* for the woman
 and the wife. A question never offers both, on either side, or one of two right
@@ -319,6 +335,7 @@ test.js                         the engine's tests
 tools/audio.js                  list what to record, index what is recorded
 tools/kokoro.py                 record it with Kokoro-82M, on this machine
 tools/eleven.py                 record German and Russian, which Kokoro cannot speak
+tools/harvest.py                propose the next lesson out of a corpus
 tools/test_eleven.py            its tests, against a stand-in for the API
 tools/mascot.py                 cut a drawing out of its background and size it
 tools/anim.py                   turn a GIF into an animated WebP with soft edges
