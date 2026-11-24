@@ -75,11 +75,19 @@ AUDIO_FORMAT = "mp3_44100_128"
 
 # Which of the account's own voices to read each course with, by name. Names
 # rather than ids: the ids differ between accounts, and the free plan cannot
-# reach the shared voice library through the API, so a run has to ask the
-# account what it actually has. --voice overrides.
+# reach the shared voice library through the API -- ElevenLabs' own quickstart
+# says so -- so a run has to ask the account what it actually has.
+#
+# That restriction is worth knowing before a month of credits goes on it. The
+# voices every account starts with are read by English speakers, and the
+# multilingual model has them speak German and Russian rather than replacing
+# them, so some of the English mouth survives the crossing. The native voices
+# are in the shared library, which is the part the free plan cannot reach. So
+# audition first -- `--limit 6` costs about fifty characters -- and listen
+# before spending the rest. --voice picks another by name.
 VOICES = {
-    "de": {"voice": "Charlotte", "note": "a measured European voice; German has never had one"},
-    "ru": {"voice": "Charlotte", "note": "the same voice, so the two courses sound of a piece"},
+    "de": {"voice": "Charlotte", "note": "pick by ear; --voices lists what the account has"},
+    "ru": {"voice": "Charlotte", "note": "the same, so the two courses sound of a piece"},
 }
 
 # Two clips of one line are never identical byte for byte, but they run to the

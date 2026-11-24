@@ -182,6 +182,13 @@ leaves a lesson that speaks some of its words and not others.
 The key is never anywhere near the page. These clips are recorded here and
 committed as files, exactly like Kokoro's, and the site serves `.mp3`.
 
+One thing to hear before spending a month on it: the free plan cannot reach the
+shared voice library through the API, which is where the native German and
+Russian voices are. The voices an account starts with are read by English
+speakers, and the multilingual model has them speak another language rather than
+replacing them, so some of the English mouth survives the crossing. Audition
+first — `python tools/eleven.py de --limit 6` costs about fifty characters.
+
 **What it costs in terms rather than money.** ElevenLabs' [terms][11tos], section
 1(c): a user on the free plan "may only use the Services for non-commercial
 purposes", under a personal e-mail address. Linguae is free to use, carries no
