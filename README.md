@@ -134,13 +134,13 @@ node tools/audio.js manifest
 | Spanish | `ef_dora` |
 | Italian | `if_sara` |
 | Latin | `if_sara`, the Italian voice — the ecclesiastical reading, and what the app already asked of `speechSynthesis` |
-| German | **none in Kokoro.** It speaks eight languages and German is not one of them; `tools/eleven.py` records that course instead |
-| Russian | **none in Kokoro** either; same tool |
+| German | **Mary K.**, a native reader from the ElevenLabs library. Kokoro speaks eight languages and German is not one of them, so `tools/eleven.py` records this course |
+| Russian | **Oleg**, the same way and for the same reason |
 
 The weights are around 350 MB and are not committed; `tools/models/` is ignored
-and `tools/kokoro.py` says where to fetch them. The clips themselves are 1,034
-files and 8.8 MB in all: 560 phrases and items, and 474 single words for the
-tiles. The manifest that indexes them is 13 KB.
+and `tools/kokoro.py` says where to fetch them. The clips themselves are 2,486
+files and 24 MB in all: 1,456 phrases and items, and 1,030 single words for the
+tiles. Every course is recorded in full. The manifest that indexes them is 13 KB.
 
 `assets/audio/index.json` is the whole contract. Without it the app never asks
 for a clip, so the feature costs nothing until the first file lands. Recording
@@ -182,12 +182,26 @@ leaves a lesson that speaks some of its words and not others.
 The key is never anywhere near the page. These clips are recorded here and
 committed as files, exactly like Kokoro's, and the site serves `.mp3`.
 
-One thing to hear before spending a month on it: the free plan cannot reach the
-shared voice library through the API, which is where the native German and
-Russian voices are. The voices an account starts with are read by English
-speakers, and the multilingual model has them speak another language rather than
-replacing them, so some of the English mouth survives the crossing. Audition
-first — `python tools/eleven.py de --limit 6` costs about fifty characters.
+The two readers are **Mary K.** and **Oleg**, both native, out of the shared
+voice library — which a paid plan can reach through the API and a free one
+cannot. On the free plan the only voices available are the ones an account
+starts with, all read by English speakers; the multilingual model has them speak
+another language rather than replacing them, so some of the English mouth
+survives the crossing. Either way, audition before committing: four voices per
+language on one line of the course cost 252 characters altogether.
+
+They are named by id rather than by name, because a name has to be looked up on
+the account and a library voice was never copied into it. That is also why the
+key needs no `voices_write`. It does need `user_read`, to see the allowance, and
+`voices_read`, to search the library.
+
+Three things have to agree before a clip is left alone: the file is there, the
+line is the one it was made from, **and the voice it was read in is the one
+being used now**. Each of those has caught a different stale recording. The last
+one was learnt the hard way — a note kept per course is written the moment the
+first clip lands, so re-reading two lines in a new voice to hear how it sounded
+made the ledger claim the whole course had changed reader, and 119 clips stayed
+in the old voice behind a run that reported success.
 
 **What it costs in terms rather than money.** ElevenLabs' [terms][11tos], section
 1(c): a user on the free plan "may only use the Services for non-commercial

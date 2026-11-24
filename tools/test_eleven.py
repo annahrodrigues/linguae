@@ -308,6 +308,17 @@ class Case(unittest.TestCase):
         self.assertEqual(len(Fake.said), 2,
                          "the two George still holds must be read again")
 
+    def test_forcing_a_rerun_is_not_reported_as_a_changed_word(self):
+        import contextlib
+        eleven.record("de", limit=2, yes=True, voice_id="id-george")
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            eleven.record("de", limit=2, yes=True, voice_id="id-george", force=True)
+        said = out.getvalue()
+        self.assertIn("because you asked", said)
+        self.assertNotIn("changed word", said, "nothing changed; it was asked for")
+        self.assertNotIn("changed voice", said)
+
     def test_the_voices_the_ledger_remembers_do_not_crowd_the_courses(self):
         eleven.record("de", limit=1, yes=True, voice_id="id-george")
         book = self.ledger()

@@ -406,10 +406,12 @@ def record(lang, limit=0, force=False, which="list", audit=False, voice=None, ye
         write_ledger(book)        # after each one: a run that dies has still told the truth
 
     write_ledger(book)
-    print("%s: %d written%s%s%s"
+    words_moved = 0 if force else redone - moved
+    print("%s: %d written%s%s%s%s"
           % (lang, written,
+             ", %d of them over again because you asked" % redone if force and redone else "",
              ", %d of them under a changed voice" % moved if moved else "",
-             ", %d under a changed word" % (redone - moved) if redone - moved > 0 else "",
+             ", %d under a changed word" % words_moved if words_moved > 0 else "",
              ", %d still good" % kept if kept else ""))
     return written
 
