@@ -17,3 +17,6 @@ desktop.ini
 # Kokoro weights, fetched by tools/kokoro.py; too big to commit and easy to refetch.
 tools/models/
 .claude/
+
+# The ElevenLabs key, for tools/eleven.py. Never commit it.
+tools/.eleven-key

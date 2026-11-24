@@ -134,7 +134,8 @@ node tools/audio.js manifest
 | Spanish | `ef_dora` |
 | Italian | `if_sara` |
 | Latin | `if_sara`, the Italian voice — the ecclesiastical reading, and what the app already asked of `speechSynthesis` |
-| German | **none.** Kokoro v1.0 speaks eight languages and German is not one of them, so that course stays on the visitor's own system voice |
+| German | **none in Kokoro.** It speaks eight languages and German is not one of them; `tools/eleven.py` records that course instead |
+| Russian | **none in Kokoro** either; same tool |
 
 The weights are around 350 MB and are not committed; `tools/models/` is ignored
 and `tools/kokoro.py` says where to fetch them. The clips themselves are 1,034
@@ -155,6 +156,41 @@ the same question where the ledger says nothing: every line is spoken again and
 the clip is kept only if it still runs as long. Two recordings of one line are
 never identical byte for byte — the encoder sees to that — but they are always
 the same length.
+
+### The two courses Kokoro cannot speak
+
+German and Russian had no recordings at all, because the model has no voice for
+either. `tools/eleven.py` records those two against the ElevenLabs API — the
+same rows out of the page, the same files, the same ledger as Kokoro, with the
+model on someone else's machine.
+
+```bash
+# the key goes in tools/.eleven-key, which .gitignore covers
+python tools/eleven.py --voices        # what the account can speak with
+python tools/eleven.py --all           # German and Russian, both
+python tools/eleven.py --all --words   # and the single words on the tiles
+node tools/audio.js manifest
+python tools/test_eleven.py            # the tool's own tests, against a fake API
+```
+
+The free plan gives 10,000 credits a month and one character of Multilingual v2
+costs one credit. German is 3,439 characters and Russian 2,702, tiles and all,
+so the pair fits inside one month with room over. The allowance is read before
+a run starts and the run is refused if it cannot be finished: stopping half way
+leaves a lesson that speaks some of its words and not others.
+
+The key is never anywhere near the page. These clips are recorded here and
+committed as files, exactly like Kokoro's, and the site serves `.mp3`.
+
+**What it costs in terms rather than money.** ElevenLabs' [terms][11tos], section
+1(c): a user on the free plan "may only use the Services for non-commercial
+purposes", under a personal e-mail address. Linguae is free to use, carries no
+advertising, sells nothing and asks for no account. The free plan also asks that
+the work credit ElevenLabs, which the page footer does. None of that applies to
+the five courses Kokoro records: that model is Apache-2.0 and runs here, which
+is why it keeps the courses it can speak rather than being replaced.
+
+[11tos]: https://elevenlabs.io/terms-of-use
 
 ### The words on the tiles
 
@@ -260,6 +296,8 @@ index.html                      the whole app
 test.js                         the engine's tests
 tools/audio.js                  list what to record, index what is recorded
 tools/kokoro.py                 record it with Kokoro-82M, on this machine
+tools/eleven.py                 record German and Russian, which Kokoro cannot speak
+tools/test_eleven.py            its tests, against a stand-in for the API
 tools/mascot.py                 cut a drawing out of its background and size it
 tools/anim.py                   turn a GIF into an animated WebP with soft edges
 tools/sfx.py                    trim, mix and encode the interface sounds
