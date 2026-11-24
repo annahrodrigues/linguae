@@ -258,13 +258,23 @@ def read_ledger():
         return {}
 
 
-def voice_of(book, lang):
-    """Which voice last read this course, by id."""
-    return (book.get("voices") or {}).get(lang) or ""
+def voices_in(book, lang):
+    """Which voice read each clip of this course, by id.
+
+    Kept per clip rather than per course. A note kept per course is written the
+    moment the first clip lands, so a run cut short -- by --limit, or by the
+    network going away -- would leave the whole course claiming a voice that
+    only a few of its clips were ever read in.
+    """
+    mine = (book.get("voices") or {}).get(lang)
+    return mine if isinstance(mine, dict) else {}
 
 
-def set_voice(book, lang, voice_id):
-    book.setdefault("voices", {})[lang] = voice_id
+def set_voice(book, lang, rid, voice_id):
+    inside = book.setdefault("voices", {})
+    if not isinstance(inside.get(lang), dict):
+        inside[lang] = {}
+    inside[lang][rid] = voice_id
 
 
 def write_ledger(book):
@@ -279,25 +289,30 @@ def speak(key, voice_id, text):
                 key, {"text": text, "model_id": MODEL}, raw=True)
 
 
-def wanted(lang, which, limit, force, audit, said, same_voice=True):
-    """The rows this run would actually spend credits on.
+def wanted(lang, which, limit, force, audit, said, heard=None, voice_id=""):
+    """The rows this run would actually spend credits on, and why.
 
     A clip is left alone only when the file is there, the line is the one it
-    was made from, and the voice has not changed under it. Changing the voice
-    leaves every line as it was, so a ledger that knew only the words would
-    skip the whole course and keep the old voice on disk."""
+    was made from, and the voice it was read in is the one being used now.
+    Changing the voice leaves every line exactly as it was, so a ledger that
+    knew only the words would skip the course and keep the old voice."""
+    heard = heard or {}
     rows = phrases(lang, which)
     if limit:
         rows = rows[:limit]
-    todo = []
+    todo, moved = [], 0
     for row in rows:
         path = os.path.join(AUDIO, lang, *(row["id"].split("/"))) + "." + FORMAT
+        was = heard.get(row["id"], "")
+        same_voice = not was or was == voice_id
         fresh = (os.path.exists(path) and said.get(row["id"]) == row["text"]
                  and same_voice)
         if fresh and not force and not audit:
             continue
+        if os.path.exists(path) and not same_voice:
+            moved += 1
         todo.append(row)
-    return rows, todo
+    return rows, todo, moved
 
 
 def record(lang, limit=0, force=False, which="list", audit=False, voice=None, yes=False,
@@ -318,11 +333,11 @@ def record(lang, limit=0, force=False, which="list", audit=False, voice=None, ye
         chosen = pick_voice(key, voice)
     else:
         chosen = pick_voice(key, spec.get("voice"), spec.get("id"))
-    was = voice_of(book, lang)
-    same_voice = not was or was == chosen["id"]
-    if not same_voice:
-        print("%s: the voice has changed since these were recorded; all of them again" % lang)
-    rows, todo = wanted(lang, which, limit, force, audit, said, same_voice)
+    heard = voices_in(book, lang)
+    rows, todo, moved = wanted(lang, which, limit, force, audit, said, heard, chosen["id"])
+    if moved:
+        print("%s: %d of these were read by another voice; those are read again"
+              % (lang, moved))
     if not rows:
         print(lang + ": nothing to record")
         return 0
@@ -385,16 +400,16 @@ def record(lang, limit=0, force=False, which="list", audit=False, voice=None, ye
         with io.open(path, "wb") as f:
             f.write(blob)
         said[row["id"]] = row["text"]
-        set_voice(book, lang, chosen["id"])
+        set_voice(book, lang, row["id"], chosen["id"])
         written += 1
         print("  %3d/%d  %-10s %6d bytes  %s" % (i, len(todo), row["id"], len(blob), row["text"]))
         write_ledger(book)        # after each one: a run that dies has still told the truth
 
     write_ledger(book)
-    print("%s: %d written%s%s"
+    print("%s: %d written%s%s%s"
           % (lang, written,
-             ", %d of them rewritten under a changed %s"
-             % (redone, "voice" if not same_voice else "word") if redone else "",
+             ", %d of them under a changed voice" % moved if moved else "",
+             ", %d under a changed word" % (redone - moved) if redone - moved > 0 else "",
              ", %d still good" % kept if kept else ""))
     return written
 

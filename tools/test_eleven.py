@@ -264,8 +264,8 @@ class Case(unittest.TestCase):
         eleven.record("de", limit=3, yes=True, voice_id="id-charlotte")
         self.assertEqual(len(Fake.said), 3, "another voice records all three again")
         book = self.ledger()
-        self.assertEqual(book["voices"]["de"], "id-charlotte",
-                         "and the ledger remembers which one read it")
+        self.assertEqual(book["voices"]["de"]["de-0-0"], "id-charlotte",
+                         "and the ledger remembers which one read each clip")
 
     def test_clips_from_before_the_ledger_knew_about_voices_are_left_alone(self):
         """A ledger written before the voice was noted says nothing about it.
@@ -297,6 +297,17 @@ class Case(unittest.TestCase):
         self.assertIn("changed word", out.getvalue())
         self.assertNotIn("changed voice", out.getvalue())
 
+    def test_a_run_cut_short_does_not_claim_the_whole_course(self):
+        """The one that actually happened: two lines were re-read in a new
+        voice, the ledger said the course had changed reader, and a hundred
+        and nineteen clips stayed in the old voice with nothing to show it."""
+        eleven.record("de", limit=4, yes=True, voice_id="id-george")
+        eleven.record("de", limit=2, yes=True, voice_id="id-charlotte")
+        Fake.said = []
+        eleven.record("de", limit=4, yes=True, voice_id="id-charlotte")
+        self.assertEqual(len(Fake.said), 2,
+                         "the two George still holds must be read again")
+
     def test_the_voices_the_ledger_remembers_do_not_crowd_the_courses(self):
         eleven.record("de", limit=1, yes=True, voice_id="id-george")
         book = self.ledger()
@@ -311,9 +322,9 @@ class Case(unittest.TestCase):
         eleven.record("de", limit=1, yes=True)
         eleven.record("ru", limit=1, yes=True)
         book = self.ledger()
-        self.assertEqual(book["voices"]["de"], eleven.VOICES["de"]["id"])
-        self.assertEqual(book["voices"]["ru"], eleven.VOICES["ru"]["id"])
-        self.assertNotEqual(book["voices"]["de"], book["voices"]["ru"],
+        self.assertEqual(book["voices"]["de"]["de-0-0"], eleven.VOICES["de"]["id"])
+        self.assertEqual(book["voices"]["ru"]["ru-0-0"], eleven.VOICES["ru"]["id"])
+        self.assertNotEqual(book["voices"]["de"]["de-0-0"], book["voices"]["ru"]["ru-0-0"],
                             "German and Russian are read by different people")
 
     def test_the_permission_is_lifted_out_of_whatever_the_api_says(self):
