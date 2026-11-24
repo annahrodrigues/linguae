@@ -225,9 +225,11 @@ class Case(unittest.TestCase):
         self.assertEqual(len(Fake.said), 2)
 
     def test_a_key_that_cannot_list_voices_asks_for_the_id_outright(self):
+        """Asking for a voice by name means looking it up on the account, which
+        a key scoped to text-to-speech may not do. An id needs no lookup."""
         Fake.deny = ("voices_read",)
         with self.assertRaises(SystemExit) as caught:
-            eleven.record("de", limit=1)
+            eleven.record("de", limit=1, yes=True, voice="Mila")
         said = str(caught.exception)
         self.assertIn("voices_read", said)
         self.assertIn("--voice-id", said, "it should say what to pass instead")
@@ -276,12 +278,43 @@ class Case(unittest.TestCase):
         eleven.record("de", limit=3, yes=True, voice_id="id-george")
         self.assertEqual(Fake.said, [], "nothing known about the voice is not a new voice")
 
+    def test_a_rewritten_clip_says_whether_the_word_or_the_voice_moved(self):
+        import contextlib
+        eleven.record("de", limit=2, yes=True, voice_id="id-george")
+
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            eleven.record("de", limit=2, yes=True, voice_id="id-charlotte")
+        self.assertIn("changed voice", out.getvalue())
+        self.assertNotIn("changed word", out.getvalue())
+
+        book = self.ledger()
+        book["de"]["de-0-0"] = "something else"
+        eleven.write_ledger(book)
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            eleven.record("de", limit=2, yes=True, voice_id="id-charlotte")
+        self.assertIn("changed word", out.getvalue())
+        self.assertNotIn("changed voice", out.getvalue())
+
     def test_the_voices_the_ledger_remembers_do_not_crowd_the_courses(self):
         eleven.record("de", limit=1, yes=True, voice_id="id-george")
         book = self.ledger()
         self.assertIn("de", book)
         self.assertIn("voices", book)
         self.assertNotIn("voices", book["de"], "the note is beside the course, not inside it")
+
+    def test_each_course_is_read_by_the_voice_chosen_for_it(self):
+        """The two voices are library ones, reached by id: a name would have to
+        be looked up on the account, and neither was ever copied into it."""
+        Fake.deny = ("voices_read",)
+        eleven.record("de", limit=1, yes=True)
+        eleven.record("ru", limit=1, yes=True)
+        book = self.ledger()
+        self.assertEqual(book["voices"]["de"], eleven.VOICES["de"]["id"])
+        self.assertEqual(book["voices"]["ru"], eleven.VOICES["ru"]["id"])
+        self.assertNotEqual(book["voices"]["de"], book["voices"]["ru"],
+                            "German and Russian are read by different people")
 
     def test_the_permission_is_lifted_out_of_whatever_the_api_says(self):
         err = eleven.Refused(401, json.dumps({"detail": {

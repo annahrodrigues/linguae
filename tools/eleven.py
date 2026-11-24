@@ -86,8 +86,10 @@ AUDIO_FORMAT = "mp3_44100_128"
 # audition first -- `--limit 6` costs about fifty characters -- and listen
 # before spending the rest. --voice picks another by name.
 VOICES = {
-    "de": {"voice": "Charlotte", "note": "pick by ear; --voices lists what the account has"},
-    "ru": {"voice": "Charlotte", "note": "the same, so the two courses sound of a piece"},
+    "de": {"voice": "Mary K.", "id": "iFSsEDGbm0FiEd2IVH4w",
+           "note": "a native German reader, chosen by ear over three others"},
+    "ru": {"voice": "Oleg", "id": "MWyJiWDobXN8FX3CJTdE",
+           "note": "a native Russian reader, chosen the same way"},
 }
 
 # Two clips of one line are never identical byte for byte, but they run to the
@@ -307,7 +309,15 @@ def record(lang, limit=0, force=False, which="list", audit=False, voice=None, ye
     book = read_ledger()
     said = book.setdefault(lang, {})
     spec = VOICES.get(lang, {})
-    chosen = pick_voice(key, voice if voice_id else (voice or spec.get("voice")), voice_id)
+    # An id names one voice and nothing else, which is what a library voice
+    # has to be reached by: a name would have to be looked up on the account,
+    # and these two were never copied into it.
+    if voice_id:
+        chosen = pick_voice(key, voice, voice_id)
+    elif voice:
+        chosen = pick_voice(key, voice)
+    else:
+        chosen = pick_voice(key, spec.get("voice"), spec.get("id"))
     was = voice_of(book, lang)
     same_voice = not was or was == chosen["id"]
     if not same_voice:
@@ -383,7 +393,8 @@ def record(lang, limit=0, force=False, which="list", audit=False, voice=None, ye
     write_ledger(book)
     print("%s: %d written%s%s"
           % (lang, written,
-             ", %d of them rewritten under a changed word" % redone if redone else "",
+             ", %d of them rewritten under a changed %s"
+             % (redone, "voice" if not same_voice else "word") if redone else "",
              ", %d still good" % kept if kept else ""))
     return written
 

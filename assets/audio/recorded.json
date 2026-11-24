@@ -99,6 +99,18 @@
   "de-22-6": "das Salz",
   "de-22-7": "die Butter",
   "de-22-8": "der Tee",
+  "de-22-9": "der Wein",
+  "de-23-0": "Ich möchte einen Tee.",
+  "de-23-1": "Die Suppe ist sehr gut.",
+  "de-23-2": "Ich esse Fisch.",
+  "de-23-3": "Sie trinkt Wein.",
+  "de-23-4": "Der Salat ist mit Käse.",
+  "de-23-5": "Hast du Obst?",
+  "de-24-0": "der Tisch",
+  "de-24-1": "die Tasse",
+  "de-24-2": "das Messer",
+  "de-24-3": "die Gabel",
+  "de-24-4": "der Löffel",
   "de-3-0": "Das ist meine Schwester.",
   "de-3-1": "Ich habe zwei Brüder.",
   "de-3-2": "Ich wohne in Berlin.",
@@ -1909,5 +1921,8 @@
   "w/vile": "vīle",
   "w/vinum": "vīnum",
   "w/vir": "vir"
+ },
+ "voices": {
+  "de": "iFSsEDGbm0FiEd2IVH4w"
  }
 }
