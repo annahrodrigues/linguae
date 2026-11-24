@@ -176,6 +176,15 @@ main{flex:1;width:100%;max-width:1200px;margin:0 auto;padding-block:28px 64px;
 .page-head p{color:var(--color-text-muted);margin-top:6px;font-size:15px}
 .tabbar{display:none}
 .appfoot{text-align:center;color:var(--color-text-muted);font-size:12px;padding:18px 0 28px}
+.freeze{display:flex;align-items:flex-start;gap:9px;margin-top:12px;padding-top:12px;
+  border-top:1px solid var(--color-border);color:var(--color-accent-ink)}
+.freeze b{display:block;font-size:13px;font-weight:700}
+.freeze small{display:block;font-size:12px;color:var(--color-text-muted);margin-top:1px}
+.freeze--none{color:var(--color-text-muted)}
+.thaw{display:flex;align-items:flex-start;gap:12px;background:var(--tile-gold);
+  border-radius:var(--radius-card);padding:14px 16px;margin-bottom:18px;color:var(--color-accent-ink)}
+.thaw b{display:block;font-size:15px;font-weight:700}
+.thaw small{display:block;font-size:12.5px;color:var(--color-text-muted);margin-top:2px}
 .appfoot__credit{display:block;margin-top:4px;font-size:11px;opacity:.8}
 .appfoot__credit a{color:inherit}
 
@@ -952,7 +961,8 @@ let S = load();
 
 function freshCourse(){ return { xp:0, crowns:{}, srs:{} }; }
 function load(){
-  const base = { active:null, streak:0, lastDay:null, todayXp:0, today:null, courses:{} };
+  const base = { active:null, streak:0, lastDay:null, todayXp:0, today:null, courses:{},
+                 freezeEarned:0, freezeUsed:0, thawed:null };
   try {
     const raw = localStorage.getItem(KEY);
     if (raw) {
@@ -969,6 +979,8 @@ function load(){
   });
   if (base.active && LANGS.indexOf(base.active) === -1) base.active = null;
   if (base.today !== today()) { base.today = today(); base.todayXp = 0; }
+  if (typeof base.freezeEarned !== "number") base.freezeEarned = 0;
+  if (typeof base.freezeUsed !== "number") base.freezeUsed = 0;
   return base;
 }
 function save(){ try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
@@ -1022,11 +1034,72 @@ function addXp(n){
 function studiedToday(){ return S.lastDay === today(); }
 function flame(outer, cls){
   const lit = studiedToday();
-  const says = "Day streak: " + S.streak + (lit ? ", kept today" : ", not kept yet today");
+  const held = freezesHeld();
+  const says = "Day streak: " + S.streak + (lit ? ", kept today" : ", not kept yet today")
+    + (held ? ", " + held + (held > 1 ? " freezes" : " freeze") + " in hand" : "");
   return '<span class="' + outer + ' flame' + (lit ? "" : " flame--cold")
     + '" title="' + says + '" aria-label="' + says + '">'
     + ic("local_fire_department", cls || "ms--sm") + S.streak + '</span>';
 }
+/* ---- streak freezes ----
+
+   A day off should not undo a month. One freeze covers one missed day, and is
+   spent on the day that was missed rather than on the day you come back -- so
+   `lastDay` means "the last day the streak was kept", by studying or by a
+   freeze, and a gap is charged once however long you stay away afterwards.
+
+   They are earned by the same work they protect: one for every FREEZE_EVERY
+   days of streak, and never more than FREEZE_CAP held at a time, so the net is
+   a day or two wide and not a way of never turning up. Nothing is bought:
+   there is no currency in this app and no plans for one.
+
+   Earned and used are counted separately and only ever go up, which is what
+   lets two devices merge: the larger count of each wins, and a freeze spent on
+   one device cannot come back from the other. */
+const FREEZE_CAP = 2;
+const FREEZE_EVERY = 5;
+
+function freezesHeld(){
+  const held = (S.freezeEarned || 0) - (S.freezeUsed || 0);
+  return Math.max(0, Math.min(FREEZE_CAP, held));
+}
+
+function dayBefore(iso){
+  const d = new Date(iso + "T00:00:00");
+  d.setDate(d.getDate() - 1);
+  return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0")
+       + "-" + String(d.getDate()).padStart(2,"0");
+}
+
+/* Called when the app opens, not when a lesson ends: the streak has to be
+   settled by the time anything shows a number, or the flame would say seven
+   through a week away and then drop to one the moment you answered. */
+function settleStreak(){
+  const t = today();
+  const d = dayDiff(S.lastDay, t);
+  if (d === null || d <= 1) return 0;          /* today, or yesterday: nothing missed */
+  const missed = d - 1;
+  const held = freezesHeld();
+  /* All or nothing. Spending them one missed day at a time, the way a counter
+     ticking at midnight would, burns them on a gap they were never going to
+     cover and leaves the streak broken anyway. This looks at the whole gap at
+     once, which is the one advantage of settling it late: a freeze is spent
+     only where it buys something. */
+  if (missed > held) {
+    S.streak = 0;
+    S.lastDay = null;
+    S.thawed = null;
+    save();
+    return 0;
+  }
+  S.freezeUsed = (S.freezeUsed || 0) + missed;
+  /* The days it covered are now days the streak was kept. */
+  S.lastDay = dayBefore(t);
+  S.thawed = { day: t, used: missed, streak: S.streak };
+  save();
+  return missed;
+}
+
 function touchStreak(){
   const t = today();
   const d = dayDiff(S.lastDay, t);
@@ -1035,6 +1108,10 @@ function touchStreak(){
   else if (d > 1) S.streak = 1;
   else if (S.streak === 0) S.streak = 1;
   S.lastDay = t;
+  /* Earned on the way up, and only while there is room to hold it. */
+  if (S.streak % FREEZE_EVERY === 0 && freezesHeld() < FREEZE_CAP) {
+    S.freezeEarned = (S.freezeEarned || 0) + 1;
+  }
 }
 
 /* ============================== SYNC ==============================
@@ -1144,6 +1221,11 @@ function mergeState(mine, theirs){
     /* Which course is open belongs to the device you are holding. */
     active: mine.active || theirs.active || null,
     streak: Math.max(mine.streak || 0, theirs.streak || 0),
+    /* Both only ever go up, so the larger is the one that has seen more: a
+       freeze spent on one device cannot be restored by the other. */
+    freezeEarned: Math.max(mine.freezeEarned || 0, theirs.freezeEarned || 0),
+    freezeUsed: Math.max(mine.freezeUsed || 0, theirs.freezeUsed || 0),
+    thawed: mine.thawed || theirs.thawed || null,
     lastDay: null, today: null, todayXp: 0, courses: {}
   };
   const days = [mine.lastDay, theirs.lastDay].filter(Boolean).sort();
@@ -2185,6 +2267,38 @@ function shell(){
 /* ---------- page: learn ---------- */
 const openNotes = {};
 
+/* What the freezes are, said where the streak is. The row is there whether or
+   not any are held: a safety net nobody knows about is no comfort, and the
+   line that says how the next one is earned is the useful half. */
+function freezeRow(){
+  const held = freezesHeld();
+  const toGo = FREEZE_EVERY - (S.streak % FREEZE_EVERY);
+  const more = held >= FREEZE_CAP
+    ? "That is as many as you can hold."
+    : (S.streak
+        ? "Another after " + toGo + (toGo > 1 ? " more days" : " more day") + " in a row."
+        : "One for every " + FREEZE_EVERY + " days in a row.");
+  return '<div class="freeze' + (held ? "" : " freeze--none") + '">'
+    + ic("ac_unit", "ms--sm")
+    + '<span><b>' + (held ? held + (held > 1 ? " streak freezes" : " streak freeze")
+                          : "No streak freeze yet") + '</b>'
+    + '<small>' + (held ? "A day missed costs one of these instead of the streak. " : "")
+    + esc(more) + '</small></span></div>';
+}
+
+/* Said once, on the day the app notices. A freeze spent without a word would
+   look like the streak had simply survived a day it should not have. */
+function thawNote(){
+  const t = S.thawed;
+  if (!t || t.day !== today()) return "";
+  return '<div class="thaw" role="status">' + ic("ac_unit")
+    + '<span><b>' + t.used + (t.used > 1 ? " streak freezes kept" : " streak freeze kept")
+    + ' your ' + t.streak + '-day streak</b>'
+    + '<small>You were away ' + t.used + (t.used > 1 ? " days" : " day")
+    + '. ' + (freezesHeld() ? freezesHeld() + " left." : "None left \u2014 the next day away ends it.")
+    + '</small></span></div>';
+}
+
 /* One illustration per unit, keyed by unit id. Units without one simply show
    no picture, so the set can be filled in a unit at a time. */
 const UNIT_ART = { u1: "assets/unit-u1.png", u2: "assets/unit-u2.png", u3: "assets/unit-u3.png" };
@@ -2264,7 +2378,9 @@ function pageLearn(){
     + progressBar(goalPct, "Daily goal")
     + '<p class="muted" style="font-size:12.5px">'
     + (goalPct >= 100 ? "Done for today. Anything more is a bonus." : "A lesson is worth 10 to 15 XP.")
-    + '</p></article>'
+    + '</p>'
+    + freezeRow()
+    + '</article>'
 
     + '<article class="card"><h4>Spaced review</h4>'
     + '<div class="mini-card' + (due ? "" : " attention") + '" style="margin-bottom:12px">'
@@ -2282,7 +2398,7 @@ function pageLearn(){
     + '<button class="btn" data-page="achievements">View all</button></article>'
     + '</aside>';
 
-  return '<div class="page"><div class="learn-layout">'
+  return '<div class="page">' + thawNote() + '<div class="learn-layout">'
     + '<div class="learn-main">' + main
     + '<p class="small-note">' + (courseHasAudio(c)
         ? "Tap a " + esc(c.name) + " word to hear it read aloud, or the speaker where a question asks about one word."
@@ -3125,6 +3241,9 @@ if (canSpeak) {
   setTimeout(onVoices, 1200);
 }
 
+/* Before the first render, so no number on screen is one the calendar has
+   already overtaken. */
+settleStreak();
 loadClips();
 render();
 /* Whatever the other device did since this one last looked. */

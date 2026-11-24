@@ -128,6 +128,8 @@ const EXPORTS = `
   pageAchievements: pageAchievements, pageProgress: pageProgress, achEarned: achEarned,
   pageLearn: pageLearn, UNIT_META: UNIT_META,
   studiedToday: studiedToday, flame: flame, shell: shell,
+  settleStreak: settleStreak, freezesHeld: freezesHeld, dayBefore: dayBefore,
+  freezeRow: freezeRow, thawNote: thawNote, pageLearn2: pageLearn,
   mergeState: mergeState, mergeCourse: mergeCourse, mergeSrs: mergeSrs,
   tidyCode: tidyCode, newCode: newCode, syncNow: syncNow, syncCard: syncCard,
   syncSays: syncSays, syncWhen: syncWhen, syncOn: syncOn, viewPicker: viewPicker,
@@ -156,7 +158,13 @@ function loadApp(options) {
     setTimeout(fn, ms) { timers.push({ fn: fn, ms: ms }); return timers.length; },
     clearTimeout(id) { if (timers[id - 1]) timers[id - 1].fn = null; },
     document: dom.document,
-    localStorage: makeStorage(),
+    /* opts.stored is what the browser already had, so a test can see what the
+       app does to it on the way up rather than only afterwards. */
+    localStorage: (function () {
+      const store = makeStorage();
+      if (opts.stored) store.setItem("lingua-trail-v1", JSON.stringify(opts.stored));
+      return store;
+    })(),
     navigator: { language: "en-GB" }
   };
   const win = {
@@ -1614,6 +1622,7 @@ const ON = [
   ["color-primary-ink", "color-primary-soft"], ["color-primary-ink", "tile-mint"],
   ["color-primary-ink", "hero-from"], ["color-primary-ink", "hero-to"],
   ["color-accent-ink", "color-surface"], ["color-accent-ink", "tile-gold"],
+  ["color-text-muted", "tile-gold"],
   ["color-coral-ink", "color-surface"], ["color-coral-ink", "tile-coral"],
   ["color-cta-ink", "color-cta"], ["medal-ink", "medal-to"]
 ];
@@ -2263,6 +2272,201 @@ test("progress is kept per course", function () {
 });
 
 /* ---------- the streak ---------- */
+
+/* ---------- streak freezes ---------- */
+
+/* The clock is the app's own: these set lastDay by hand, the way a calendar
+   would have, rather than waiting a day to find out. */
+function dayStamp(n) {
+  const d = new Date();
+  d.setDate(d.getDate() - n);
+  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0")
+       + "-" + String(d.getDate()).padStart(2, "0");
+}
+
+function streakOf(a, opts) {
+  const S = a.state();
+  S.streak = opts.streak;
+  S.lastDay = dayStamp(opts.ago);
+  S.freezeEarned = opts.earned || 0;
+  S.freezeUsed = opts.used || 0;
+  S.thawed = null;
+  return S;
+}
+
+test("a freeze is earned every five days and no more than two are held", function () {
+  const a = loadApp();
+  freshSrs(a, "fr");
+  const S = a.state();
+  S.streak = 0; S.lastDay = null; S.freezeEarned = 0; S.freezeUsed = 0;
+
+  /* Written out rather than read from the app: a test that borrows the
+     interval it is checking agrees with whatever the app happens to hold. */
+  /* Written out rather than counted from the app: one at five, a second at
+     ten, and nothing after that because two is as many as you can hold. */
+  const BY_DAY = [0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2];
+  for (let day = 1; day <= 15; day++) {
+    S.lastDay = day === 1 ? null : dayStamp(1);
+    a.touchStreak();
+    assert.strictEqual(S.streak, day, "day " + day);
+    assert.strictEqual(a.freezesHeld(), BY_DAY[day - 1],
+      "on day " + day + " there should be " + BY_DAY[day - 1]);
+  }
+});
+
+test("a freeze earned at the cap is not banked for later", function () {
+  const a = loadApp();
+  freshSrs(a, "fr");
+  const S = a.state();
+  S.streak = 0; S.lastDay = null; S.freezeEarned = 0; S.freezeUsed = 0;
+  for (let day = 1; day <= 15; day++) {
+    S.lastDay = day === 1 ? null : dayStamp(1);
+    a.touchStreak();
+  }
+  /* Fifteen days is three five-day marks, but the third passed while both
+     hands were full, so it was never earned and cannot turn up afterwards. */
+  S.lastDay = dayStamp(3);
+  a.settleStreak();
+  assert.strictEqual(S.streak, 15, "two freezes cover the two days missed");
+  assert.strictEqual(a.freezesHeld(), 0, "and there is nothing left behind them");
+});
+
+test("a count that arrives too high is still held to the cap", function () {
+  const a = loadApp();
+  freshSrs(a, "fr");
+  const S = a.state();
+  /* Two devices merge by taking the larger count each has seen, so a figure
+     above the cap can arrive without either of them ever earning one. */
+  S.freezeEarned = 9; S.freezeUsed = 0;
+  assert.strictEqual(a.freezesHeld(), 2);
+});
+
+test("a day missed costs a freeze, not the streak", function () {
+  const a = loadApp();
+  freshSrs(a, "fr");
+  const S = streakOf(a, { streak: 9, ago: 2, earned: 1 });   /* yesterday was missed */
+
+  assert.strictEqual(a.settleStreak(), 1, "one freeze goes");
+  assert.strictEqual(S.streak, 9, "and the streak stands");
+  assert.strictEqual(a.freezesHeld(), 0);
+
+  a.touchStreak();
+  assert.strictEqual(S.streak, 10, "studying today carries on from nine");
+});
+
+test("the gap is charged once, however long you stay away afterwards", function () {
+  const a = loadApp();
+  freshSrs(a, "fr");
+  const S = streakOf(a, { streak: 9, ago: 2, earned: 2 });
+  assert.strictEqual(a.settleStreak(), 1);
+  /* Opening the app again the same day must not spend a second one. */
+  assert.strictEqual(a.settleStreak(), 0, "the same day costs nothing more");
+  assert.strictEqual(a.settleStreak(), 0);
+  assert.strictEqual(a.freezesHeld(), 1, "the second freeze is still in hand");
+});
+
+test("two days away cost two freezes", function () {
+  const a = loadApp();
+  freshSrs(a, "fr");
+  const S = streakOf(a, { streak: 20, ago: 3, earned: 2 });
+  assert.strictEqual(a.settleStreak(), 2);
+  assert.strictEqual(S.streak, 20);
+  assert.strictEqual(a.freezesHeld(), 0);
+});
+
+test("a gap wider than the freezes ends the streak, and spends none of them", function () {
+  const a = loadApp();
+  freshSrs(a, "fr");
+  const S = streakOf(a, { streak: 30, ago: 5, earned: 2 });  /* four days missed */
+  a.settleStreak();
+  assert.strictEqual(S.streak, 0, "thirty days are gone");
+  assert.strictEqual(S.lastDay, null);
+  assert.strictEqual(a.freezesHeld(), 2,
+    "and the freezes are kept rather than burnt on a streak they could not save");
+});
+
+test("coming back the next day spends nothing", function () {
+  const a = loadApp();
+  freshSrs(a, "fr");
+  const S = streakOf(a, { streak: 4, ago: 1, earned: 2 });
+  assert.strictEqual(a.settleStreak(), 0, "yesterday is not a day missed");
+  assert.strictEqual(a.freezesHeld(), 2);
+  assert.strictEqual(S.thawed, null, "and there is nothing to tell anyone about");
+  assert.strictEqual(a.thawNote(), "");
+  a.touchStreak();
+  assert.strictEqual(S.streak, 5);
+});
+
+test("the streak is settled as the app opens, before a number is drawn", function () {
+  /* Otherwise the flame says nine through a week away and drops to one the
+     moment you answer a question. */
+  const a = loadApp({ stored: {
+    active: "fr", streak: 9, lastDay: dayStamp(2), today: null, todayXp: 0,
+    freezeEarned: 1, freezeUsed: 0, courses: {}
+  } });
+  assert.strictEqual(a.state().streak, 9, "the freeze was spent on the way up");
+  assert.strictEqual(a.freezesHeld(), 0);
+  assert.ok(a.state().thawed, "and the page has something to say about it");
+});
+
+test("a course never started has nothing to settle", function () {
+  const a = loadApp();
+  freshSrs(a, "fr");
+  const S = a.state();
+  S.streak = 0; S.lastDay = null; S.freezeEarned = 2; S.freezeUsed = 0;
+  assert.strictEqual(a.settleStreak(), 0);
+  assert.strictEqual(a.freezesHeld(), 2);
+});
+
+test("the day before is a real calendar day", function () {
+  const a = loadApp();
+  assert.strictEqual(a.dayBefore("2026-03-01"), "2026-02-28", "not a leap year");
+  assert.strictEqual(a.dayBefore("2024-03-01"), "2024-02-29", "but this one is");
+  assert.strictEqual(a.dayBefore("2026-01-01"), "2025-12-31", "and the year turns");
+});
+
+test("what the freeze saved is said once, on the day it is noticed", function () {
+  const a = loadApp();
+  freshSrs(a, "fr");
+  streakOf(a, { streak: 12, ago: 2, earned: 1 });
+  a.settleStreak();
+  const html = a.pageLearn2();
+  assert.ok(html.indexOf("12-day streak") > -1, "it should say what was kept");
+  assert.ok(html.indexOf("None left") > -1, "and that there is no second chance");
+
+  /* Tomorrow it is yesterday's news. */
+  a.state().thawed.day = "2020-01-01";
+  assert.strictEqual(a.thawNote(), "");
+});
+
+test("the freezes are shown whether or not any are held", function () {
+  const a = loadApp();
+  freshSrs(a, "fr");
+  streakOf(a, { streak: 3, ago: 0, earned: 0 });
+  let row = a.freezeRow();
+  assert.ok(row.indexOf("No streak freeze yet") > -1);
+  assert.ok(row.indexOf("2 more days") > -1, "and how near the next one is");
+
+  streakOf(a, { streak: 10, ago: 0, earned: 2 });
+  row = a.freezeRow();
+  assert.ok(row.indexOf("2 streak freezes") > -1);
+  assert.ok(row.indexOf("as many as you can hold") > -1);
+});
+
+test("two devices never put a spent freeze back", function () {
+  const a = loadApp();
+  /* Earned and used only go up, so the larger of each is the one that has
+     seen more. Taking the larger of what is *held* would restore a freeze
+     the other device had already spent. */
+  const here = { streak: 10, lastDay: "2026-03-10", freezeEarned: 2, freezeUsed: 0, courses: {} };
+  const there = { streak: 10, lastDay: "2026-03-10", freezeEarned: 2, freezeUsed: 2, courses: {} };
+  const both = a.mergeState(here, there);
+  assert.strictEqual(both.freezeEarned, 2);
+  assert.strictEqual(both.freezeUsed, 2);
+
+  const back = a.mergeState(there, here);
+  assert.strictEqual(back.freezeUsed, 2, "whichever way round they meet");
+});
 
 test("the streak counts consecutive days and resets after a gap", function () {
   const a = loadApp();
