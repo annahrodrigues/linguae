@@ -35,6 +35,7 @@ Pages from building anything and has it copy them across as they are.
 | **Spaced repetition** | Leitner boxes at 1, 3, 7, 16 and 35 days; get one wrong and the word drops to box 2 and comes back in the same session |
 | **Practice** | a page of its own with four sets, none of them locked: today's review, a listening drill with nothing on screen but the sound, a pronunciation drill you answer by speaking, and the words you have answered wrong, the worst first. Up to 10 words a session, no hearts at stake, 8 XP |
 | **Progress** | 5 crowns per lesson, XP, a daily goal of 30 XP, a day streak and 9 achievements. The streak flame is grey until a lesson is finished that day: the number is the days already banked, the fire is today |
+| **Streak freezes** | one earned every 5 days in a row, two held at most. A day away spends one instead of the streak. A gap wider than what you hold ends the streak and spends none of them — burning them on a gap they cannot cover leaves you with neither |
 | **Hearts** | 5 per lesson; run out and the lesson restarts |
 | **Sounds** | a recording on each answer, and three for the end of a lesson: a clean run, a run with up to three misses, and one with more; where a browser will not play them, a pair of oscillators answers instead |
 | **Audio** | a recorded clip when the repository has one, otherwise the browser's `speechSynthesis` at the natural rate, on the best voice the system offers — a neural or Google voice over a legacy one; with neither, that word goes quiet rather than be read in another language's accent |
