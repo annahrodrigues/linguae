@@ -176,6 +176,8 @@ main{flex:1;width:100%;max-width:1200px;margin:0 auto;padding-block:28px 64px;
 .page-head p{color:var(--color-text-muted);margin-top:6px;font-size:15px}
 .tabbar{display:none}
 .appfoot{text-align:center;color:var(--color-text-muted);font-size:12px;padding:18px 0 28px}
+.appfoot__credit{display:block;margin-top:4px;font-size:11px;opacity:.8}
+.appfoot__credit a{color:inherit}
 
 /* ---------- hero ---------- */
 .hero{position:relative;overflow:hidden;display:flex;align-items:center;justify-content:space-between;
@@ -2170,7 +2172,12 @@ function shell(){
     + '</div>'
     + '</header>'
     + '<main>' + body + '</main>'
-    + '<footer class="appfoot">Linguae · a new language, from one you already have</footer>'
+    /* The German and Russian recordings were made on ElevenLabs' free plan,
+       which asks that the work credit it. The other five courses are read by
+       Kokoro, which is Apache-2.0 and asks for nothing. */
+    + '<footer class="appfoot">Linguae · a new language, from one you already have'
+    + '<span class="appfoot__credit">German and Russian voices by '
+    + '<a href="https://elevenlabs.io" rel="noopener">elevenlabs.io</a></span></footer>'
     + '</div></div>'
     + '<nav class="tabbar" aria-label="Main">' + tabs + '</nav>';
 }

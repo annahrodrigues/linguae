@@ -251,6 +251,38 @@ class Case(unittest.TestCase):
         self.assertNotIn("Charlotte", said,
                          "the default name must not be printed over a voice chosen by id")
 
+    def test_changing_the_voice_records_the_course_again(self):
+        """The words do not change when the voice does, so a ledger that knew
+        only the words would keep the old voice on disk."""
+        eleven.record("de", limit=3, yes=True, voice_id="id-george")
+        Fake.said = []
+        eleven.record("de", limit=3, yes=True, voice_id="id-george")
+        self.assertEqual(Fake.said, [], "the same voice spends nothing")
+
+        eleven.record("de", limit=3, yes=True, voice_id="id-charlotte")
+        self.assertEqual(len(Fake.said), 3, "another voice records all three again")
+        book = self.ledger()
+        self.assertEqual(book["voices"]["de"], "id-charlotte",
+                         "and the ledger remembers which one read it")
+
+    def test_clips_from_before_the_ledger_knew_about_voices_are_left_alone(self):
+        """A ledger written before the voice was noted says nothing about it.
+        That is not a changed voice, and must not cost the course again."""
+        eleven.record("de", limit=3, yes=True, voice_id="id-george")
+        book = self.ledger()
+        del book["voices"]                      # as an older run would have left it
+        eleven.write_ledger(book)
+        Fake.said = []
+        eleven.record("de", limit=3, yes=True, voice_id="id-george")
+        self.assertEqual(Fake.said, [], "nothing known about the voice is not a new voice")
+
+    def test_the_voices_the_ledger_remembers_do_not_crowd_the_courses(self):
+        eleven.record("de", limit=1, yes=True, voice_id="id-george")
+        book = self.ledger()
+        self.assertIn("de", book)
+        self.assertIn("voices", book)
+        self.assertNotIn("voices", book["de"], "the note is beside the course, not inside it")
+
     def test_the_permission_is_lifted_out_of_whatever_the_api_says(self):
         err = eleven.Refused(401, json.dumps({"detail": {
             "message": "The API key you used is missing the permission "

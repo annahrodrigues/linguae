@@ -256,6 +256,15 @@ def read_ledger():
         return {}
 
 
+def voice_of(book, lang):
+    """Which voice last read this course, by id."""
+    return (book.get("voices") or {}).get(lang) or ""
+
+
+def set_voice(book, lang, voice_id):
+    book.setdefault("voices", {})[lang] = voice_id
+
+
 def write_ledger(book):
     os.makedirs(AUDIO, exist_ok=True)
     with io.open(ledger_path(), "w", encoding="utf-8", newline="\n") as f:
@@ -268,15 +277,21 @@ def speak(key, voice_id, text):
                 key, {"text": text, "model_id": MODEL}, raw=True)
 
 
-def wanted(lang, which, limit, force, audit, said):
-    """The rows this run would actually spend credits on."""
+def wanted(lang, which, limit, force, audit, said, same_voice=True):
+    """The rows this run would actually spend credits on.
+
+    A clip is left alone only when the file is there, the line is the one it
+    was made from, and the voice has not changed under it. Changing the voice
+    leaves every line as it was, so a ledger that knew only the words would
+    skip the whole course and keep the old voice on disk."""
     rows = phrases(lang, which)
     if limit:
         rows = rows[:limit]
     todo = []
     for row in rows:
         path = os.path.join(AUDIO, lang, *(row["id"].split("/"))) + "." + FORMAT
-        fresh = os.path.exists(path) and said.get(row["id"]) == row["text"]
+        fresh = (os.path.exists(path) and said.get(row["id"]) == row["text"]
+                 and same_voice)
         if fresh and not force and not audit:
             continue
         todo.append(row)
@@ -291,7 +306,13 @@ def record(lang, limit=0, force=False, which="list", audit=False, voice=None, ye
     key = api_key()
     book = read_ledger()
     said = book.setdefault(lang, {})
-    rows, todo = wanted(lang, which, limit, force, audit, said)
+    spec = VOICES.get(lang, {})
+    chosen = pick_voice(key, voice if voice_id else (voice or spec.get("voice")), voice_id)
+    was = voice_of(book, lang)
+    same_voice = not was or was == chosen["id"]
+    if not same_voice:
+        print("%s: the voice has changed since these were recorded; all of them again" % lang)
+    rows, todo = wanted(lang, which, limit, force, audit, said, same_voice)
     if not rows:
         print(lang + ": nothing to record")
         return 0
@@ -318,10 +339,6 @@ def record(lang, limit=0, force=False, which="list", audit=False, voice=None, ye
                      "  start anyway and stop when the credits run out."
                      % (cost - purse["left"]))
 
-    spec = VOICES.get(lang, {})
-    # Named by id and not by name: call it by the id, rather than by the name
-    # this file happens to default to, which would be a different voice.
-    chosen = pick_voice(key, voice if voice_id else (voice or spec.get("voice")), voice_id)
     print("  voice: %s (%s)" % (chosen["name"], chosen["kind"]))
 
     folder = os.path.join(AUDIO, lang)
@@ -358,6 +375,7 @@ def record(lang, limit=0, force=False, which="list", audit=False, voice=None, ye
         with io.open(path, "wb") as f:
             f.write(blob)
         said[row["id"]] = row["text"]
+        set_voice(book, lang, chosen["id"])
         written += 1
         print("  %3d/%d  %-10s %6d bytes  %s" % (i, len(todo), row["id"], len(blob), row["text"]))
         write_ledger(book)        # after each one: a run that dies has still told the truth

@@ -1013,6 +1013,18 @@ test("the tile recordings were made from the words the tiles show", function () 
   assert.ok(checked > 500, "only " + checked + " tile recordings were checked");
 });
 
+test("the page credits the voice it was lent", function () {
+  const a = loadApp();
+  a.setActive("de");
+  a.prog().srs = {}; a.prog().crowns = {};
+  /* The German and Russian recordings were made on ElevenLabs' free plan,
+     which asks that the work credit it. Written out rather than read from the
+     page: a test that quotes the line it is checking agrees with any line. */
+  const html = a.shell();
+  assert.ok(html.indexOf("elevenlabs.io") > -1, "the credit should be on the page");
+  assert.ok(html.indexOf("German and Russian") > -1, "and say what it is for");
+});
+
 test("no clip is named after a device Windows keeps for itself", function () {
   const file = path.join(__dirname, "assets", "audio", "index.json");
   if (!fs.existsSync(file)) return;
