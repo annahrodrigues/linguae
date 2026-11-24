@@ -256,8 +256,29 @@ function cmdStatus() {
   });
 }
 
+/* The course as the page has it, for a tool that needs to know what has been
+   taught by a given point -- tools/harvest.py reads this. The page stays the
+   one source of truth, here as everywhere else. */
+function cmdCourse(lang) {
+  const c = courses();
+  if (!c.COURSES[lang]) {
+    console.error("no course called " + lang);
+    process.exit(1);
+  }
+  const out = { id: lang, units: c.COURSES[lang].units.map(function (u) {
+    return { id: u.id, title: u.title, lessons: u.lessons.map(function (l) {
+      return { id: l.id, title: l.title, kind: l.kind,
+               items: l.items.map(function (it) {
+                 return { id: it.id, en: it.en, tgt: it.tgt, rom: it.rom || "" };
+               }) };
+    }) };
+  }) };
+  console.log(JSON.stringify(out));
+}
+
 const cmd = process.argv[2];
-if (cmd === "list") cmdList(process.argv[3]);
+if (cmd === "course") cmdCourse(process.argv[3]);
+else if (cmd === "list") cmdList(process.argv[3]);
 else if (cmd === "words") cmdWords(process.argv[3]);
 else if (cmd === "manifest") cmdManifest();
 else if (cmd === "status") cmdStatus();
