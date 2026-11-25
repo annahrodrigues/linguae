@@ -28,7 +28,7 @@ Pages from building anything and has it copy them across as they are.
 
 | | |
 |---|---|
-| **Courses** | 7 courses, 7 units and 30 lessons each, 240 words and phrases per course. The first four units run to six lessons each, the units after them to two apiece. Spanish, French, German, Italian, Latin and Russian are taught from English; English is taught from Portuguese |
+| **Courses** | 7 courses, 7 units and 42 lessons each, 336 words and phrases per course. Every unit runs to six lessons: three of words and three of the phrases made from them, alternating. Spanish, French, German, Italian, Latin and Russian are taught from English; English is taught from Portuguese |
 | **Exercises** | 7 kinds: match the pairs, pick the translation in either direction, listen and transcribe, build from a word bank, free typing, and say it out loud |
 | **Keyboard** | A to D pick a lettered option; in the word bank, typing a word lays its piece down as soon as only one piece can be meant, a space settles for the word as typed where something longer begins the same way, and backspace takes back the letters first and then the last piece; Enter checks |
 | **Marking** | accents and punctuation are normalised, and a one-letter typo counts as correct, with a note |
@@ -139,8 +139,8 @@ node tools/audio.js manifest
 | Russian | **Oleg**, the same way and for the same reason |
 
 The weights are around 350 MB and are not committed; `tools/models/` is ignored
-and `tools/kokoro.py` says where to fetch them. The clips themselves are 2,486
-files and 24 MB in all: 1,456 phrases and items, and 1,030 single words for the
+and `tools/kokoro.py` says where to fetch them. The clips themselves are 3,886
+files and 38 MB in all: 2,352 phrases and items, and 1,534 single words for the
 tiles. Every course is recorded in full. The manifest that indexes them is 13 KB.
 
 `assets/audio/index.json` is the whole contract. Without it the app never asks

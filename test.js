@@ -738,7 +738,7 @@ test("the English course puts Portuguese on the known side", function () {
 test("every Russian item carries a romanisation", function () {
   const a = loadApp();
   const items = a.COURSES.ru.items;
-  assert.strictEqual(items.length, 240);
+  assert.strictEqual(items.length, 336);
   items.forEach(function (it) {
     assert.ok(it.rom && it.rom.trim(), it.id + " (" + it.en + ") has no romanisation");
     assert.ok(/[\u0400-\u04FF]/.test(it.tgt), it.id + " is not written in Cyrillic");
@@ -2680,11 +2680,12 @@ test("every course carries the same shape", function () {
   a.LANGS.forEach(function (lg) {
     const c = a.COURSES[lg];
     assert.strictEqual(c.units.length, 7, lg + " should have seven units");
-    /* The first four units run to six lessons; the rest are still a pair. */
-    eq(c.units.map(function (u) { return u.lessons.length; }), [6, 6, 6, 6, 2, 2, 2],
+    /* Every unit runs to six lessons now: three of words and three of the
+       phrases made from them, alternating. */
+    eq(c.units.map(function (u) { return u.lessons.length; }), [6, 6, 6, 6, 6, 6, 6],
        lg + " has the wrong number of lessons in a unit");
-    assert.strictEqual(c.lessons.length, 30, lg + " should have thirty lessons");
-    assert.strictEqual(c.items.length, 240, lg + " should have 240 items");
+    assert.strictEqual(c.lessons.length, 42, lg + " should have forty-two lessons");
+    assert.strictEqual(c.items.length, 336, lg + " should have 336 items");
     c.lessons.forEach(function (l) {
       assert.ok(l.kind === "w" || l.kind === "p", "a lesson is words or phrases");
       /* Lessons alternate: ten words, then six phrases built from them. */
@@ -2702,7 +2703,7 @@ test("every course carries the same shape", function () {
         lg + "/" + u.id + " should teach the words before the phrases made of them");
     });
     const vocab = c.lessons.filter(function (l) { return l.kind === "w"; });
-    assert.strictEqual(vocab.length, 15, lg + " should have fifteen vocabulary lessons");
+    assert.strictEqual(vocab.length, 21, lg + " should have twenty-one vocabulary lessons");
     vocab.forEach(function (l) {
       assert.ok(l.items.length >= 5, lg + "/" + l.id + " cannot fill a five-pair match");
     });
@@ -2744,8 +2745,9 @@ test("the lessons that were there before keep the ids progress was saved under",
   eq(a.COURSES.fr.units[3].lessons.map(function (l) { return l.id; }),
      ["fr-6", "fr-7", "fr-26", "fr-27", "fr-28", "fr-29"],
      "and Everyday life, the one written from the corpus");
-  eq(a.COURSES.fr.units[4].lessons.map(function (l) { return l.id; }), ["fr-8", "fr-9"],
-     "while the units after them are untouched");
+  eq(a.COURSES.fr.units[6].lessons.map(function (l) { return l.id; }),
+     ["fr-12", "fr-13", "fr-38", "fr-39", "fr-40", "fr-41"],
+     "down to the last one, which keeps the two it opened with");
   eq(a.COURSES.fr.units[0].lessons.map(function (l) { return l.title; }),
      ["Greetings", "First phrases", "Everyday words", "Saying who you are",
       "Small words", "Putting it together"],
@@ -2757,10 +2759,21 @@ test("the path counts the lessons a unit really has", function () {
   freshSrs(a, "fr");
   const html = a.pageLearn();
   /* The trophy at the end of a unit used to say "both lessons", which Basics
-     stopped being the moment it grew past two. */
-  assert.ok(html.indexOf("Finish all 6 lessons") > -1, "Basics asks for its six");
-  assert.ok(html.indexOf("Finish all 2 lessons") > -1, "and the units after it for their two");
+     stopped being the moment it grew past two. Every unit is six now, so what
+     is checked is that the number is counted and not written down: a trophy
+     that says six for a unit of two is the same bug the other way round. */
+  const says = html.split("Finish all ").length - 1;
+  assert.strictEqual(says, 7, "one trophy per unit");
+  assert.strictEqual(html.split("Finish all 6 lessons").length - 1, 7,
+    "and each of them counts six");
   assert.strictEqual(html.indexOf("both lessons"), -1);
+
+  /* Every unit is six at the moment, so the page would read the same whether
+     the number is counted or written down. Take a lesson away and it cannot. */
+  a.COURSES.fr.units[0].lessons.pop();
+  const five = a.pageLearn();
+  assert.ok(five.indexOf("Finish all 5 lessons") > -1,
+    "the trophy counts the lessons rather than knowing how many there are");
 });
 
 test("the new lessons are reachable in order, not locked behind the old ones", function () {
@@ -2782,7 +2795,8 @@ test("the new lessons are reachable in order, not locked behind the old ones", f
    own unit teaches, and on Basics before it. */
 test("every unit that grew leans on the words it teaches", function () {
   const a = loadApp();
-  const ADDED = { 0: ["15", "17"], 1: ["19", "21"], 2: ["23", "25"], 3: ["27", "29"] };
+  const ADDED = { 0: ["15", "17"], 1: ["19", "21"], 2: ["23", "25"], 3: ["27", "29"],
+                  4: ["31", "33"], 5: ["35", "37"], 6: ["39", "41"] };
   a.LANGS.forEach(function (lg) {
     Object.keys(ADDED).forEach(function (ui) {
       const unit = a.COURSES[lg].units[+ui];
